@@ -1,0 +1,16 @@
+{
+  "name": "balqarn-dashboard-2026",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:43687/git/s5956gpxwn-source/balqarn-dashboard-2026"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
