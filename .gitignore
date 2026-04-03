@@ -1,9 +1,14 @@
 .env
 .env.local
 .env.*.local
+.env.production
 node_modules/
 .DS_Store
 *.log
 .firebase/
 firebase-debug.log
 .firebaserc
+
+# بيانات حساسة - لا ترفع للمستودع
+projects-data.json
+*.credentials

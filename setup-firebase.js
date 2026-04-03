@@ -1,7 +1,15 @@
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
-const API_KEY = 'AIzaSyBfrpIEJ9AenB3eW7FGBflBbyc3O0KEfZ8';
-const PROJECT_ID = 'balqarn-dashboard';
+const API_KEY = process.env.FIREBASE_API_KEY;
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'balqarn-dashboard';
+
+if (!API_KEY) {
+  console.error('❌ يجب تعيين FIREBASE_API_KEY كمتغير بيئة');
+  console.error('   مثال: FIREBASE_API_KEY=xxx BALQARN_PASS_RB=xxx ... node setup-firebase.js');
+  process.exit(1);
+}
 
 // ─── HTTP Helper ───
 function request(hostname, path, method, body) {
@@ -94,15 +102,33 @@ function writeDocAuth(collectionName, docId, fields, idToken) {
 }
 
 // ─── المستخدمون ───
+// كلمات المرور تُمرر عبر متغيرات البيئة (environment variables)
+// مثال: BALQARN_PASS_RB=xxx BALQARN_PASS_MS=xxx BALQARN_PASS_MM=xxx BALQARN_PASS_ADMIN=xxx node setup-firebase.js
 const USERS = [
-  { email: 'rb@balqarn.app', pass: 'Balqarn@2026rb', name: 'رئيس البلدية', welcome: 'مرحباً رئيس بلدية بلقرن', role: 'viewer' },
-  { email: 'ms@balqarn.app', pass: 'Balqarn@2026ms', name: 'مساعد رئيس البلدية', welcome: 'مرحباً مساعد رئيس بلدية بلقرن', role: 'viewer' },
-  { email: 'mm@balqarn.app', pass: 'Balqarn@2026mm', name: 'مدير المشاريع', welcome: 'مرحباً مدير إدارة المشاريع ببلقرن', role: 'viewer' },
-  { email: 'admin@balqarn.app', pass: 'Balqarn@2026admin', name: 'المهندس محمد', welcome: 'مرحباً م. محمد مرعي القرني', role: 'admin' }
+  { email: 'rb@balqarn.app', pass: process.env.BALQARN_PASS_RB, name: 'رئيس البلدية', welcome: 'مرحباً رئيس بلدية بلقرن', role: 'viewer' },
+  { email: 'ms@balqarn.app', pass: process.env.BALQARN_PASS_MS, name: 'مساعد رئيس البلدية', welcome: 'مرحباً مساعد رئيس بلدية بلقرن', role: 'viewer' },
+  { email: 'mm@balqarn.app', pass: process.env.BALQARN_PASS_MM, name: 'مدير المشاريع', welcome: 'مرحباً مدير إدارة المشاريع ببلقرن', role: 'viewer' },
+  { email: 'admin@balqarn.app', pass: process.env.BALQARN_PASS_ADMIN, name: 'المهندس محمد', welcome: 'مرحباً م. محمد مرعي القرني', role: 'admin' }
 ];
 
+const missingPasswords = USERS.filter(u => !u.pass).map(u => u.email);
+if (missingPasswords.length > 0) {
+  console.error('❌ كلمات المرور مطلوبة للمستخدمين التالية:', missingPasswords.join(', '));
+  console.error('   مثال: BALQARN_PASS_RB=xxx BALQARN_PASS_MS=xxx BALQARN_PASS_MM=xxx BALQARN_PASS_ADMIN=xxx node setup-firebase.js');
+  process.exit(1);
+}
+
 // ─── المشاريع ───
-const PROJECTS = [{"id":1,"name":"سفلتة مخططات المنح مرحلة ثانية","status":"stopped","status_raw":"متوقف","phase":"التنفيذ والاختبار","progress":94,"value":"9.87 م","value_num":9872474,"contractor":"خالد مشرف آل طاوي","supervisor":"سعود كونسلت","consultant":"م. السيد سالم الدسوقي","pm":"م. محمد جاري القرني","pm_email":"Mgsalq@ars.gov.sa","pm_phone":"0546889994","category":"سفلتة","budget_door":"الباب الرابع","contract_no":"019/001/000/408510000/3111311","project_no":"220839650704","duration_days":360,"extensions":"70 + 77 = 147","stops":0,"date_sign":"1446-01-01","date_site":"2024-08-18","date_end":"2025-08-13","date_end_adj":"","date_receive_primary":"","date_receive_final":"","date_updated":"2026-04-01","last_action":"المشروع متوقف لحين اعتماد نقل الوفر","notes":"","letters":"نقل الوفر برقم 95153 وتاريخ 1447/6/10 هـ — طلب إيقاف برقم 95304 وتاريخ 1447/7/2 هـ — الموافقة على نقل الوفر برقم 1111388 وتاريخ 1447/9/9 هـ","vision_linked":"لا","initiative":"مبادرة سفلتة مخططت المنح","tax_pct":15,"increase_pct":0,"contractor_engineer":"م. محمود إبراهيم","contractor_email":"amr.project@altawi.org","contractor_phone":"0504163181","contractor_rank":"","scope":"تشييد - إنشاء","description":"سفلتة لبعض المخططات"},{"id":2,"name":"صيانة حدائق المراكز","status":"pending","status_raw":"قيد الطرح والترسية","phase":"الطرح والترسية","progress":0,"value":"832,813","value_num":832813,"contractor":"","supervisor":"","consultant":"","pm":"م. محمد جاري القرني","pm_email":"Mgsalq@ars.gov.sa","pm_phone":"0546889994","category":"حدائق","budget_door":"الباب الثالث","contract_no":"","project_no":"","duration_days":360,"extensions":"0","stops":0,"date_sign":"","date_site":"","date_end":"","date_end_adj":"","date_receive_primary":"","date_receive_final":"","date_updated":"2026-04-01","last_action":"","notes":"","letters":"","vision_linked":"لا","initiative":"","tax_pct":0,"increase_pct":0,"contractor_engineer":"","contractor_email":"","contractor_phone":"","contractor_rank":"","scope":"","description":"صيانة"},{"id":3,"name":"سفلتة قرى محافظة بلقرن","status":"pending","status_raw":"قيد الطرح والترسية","phase":"الطرح والترسية","progress":0,"value":"786,784","value_num":786784,"contractor":"","supervisor":"","consultant":"","pm":"م. محمد جاري القرني","pm_email":"Mgsalq@ars.gov.sa","pm_phone":"0546889994","category":"صيانة طرق","budget_door":"الباب الثالث","contract_no":"","project_no":"","duration_days":360,"extensions":"0","stops":0,"date_sign":"","date_site":"","date_end":"","date_end_adj":"","date_receive_primary":"","date_receive_final":"","date_updated":"2026-04-01","last_action":"","notes":"","letters":"","vision_linked":"","initiative":"","tax_pct":0,"increase_pct":0,"contractor_engineer":"","contractor_email":"","contractor_phone":"","contractor_rank":"","scope":"","description":"صيانة"},{"id":4,"name":"سفلتة مخططات محافظة بلقرن","status":"pending","status_raw":"قيد الطرح والترسية","phase":"الطرح والترسية","progress":0,"value":"742,958","value_num":742958,"contractor":"","supervisor":"","consultant":"","pm":"م. محمد جاري القرني","pm_email":"Mgsalq@ars.gov.sa","pm_phone":"0546889994","category":"صيانة طرق","budget_door":"الباب الثالث","contract_no":"","project_no":"","duration_days":360,"extensions":"0","stops":0,"date_sign":"","date_site":"","date_end":"","date_end_adj":"","date_receive_primary":"","date_receive_final":"","date_updated":"2026-04-01","last_action":"","notes":"","letters":"","vision_linked":"","initiative":"","tax_pct":0,"increase_pct":0,"contractor_engineer":"","contractor_email":"","contractor_phone":"","contractor_rank":"","scope":"","description":"صيانة"},{"id":5,"name":"صيانة أعمال الشارع العام","status":"pending","status_raw":"قيد الطرح والترسية","phase":"الطرح والترسية","progress":0,"value":"233,680","value_num":233680,"contractor":"","supervisor":"","consultant":"","pm":"م. محمد جاري القرني","pm_email":"Mgsalq@ars.gov.sa","pm_phone":"0546889994","category":"صيانة طرق","budget_door":"الباب الثالث","contract_no":"","project_no":"","duration_days":360,"extensions":"0","stops":0,"date_sign":"","date_site":"","date_end":"","date_end_adj":"","date_receive_primary":"","date_receive_final":"","date_updated":"2026-04-01","last_action":"","notes":"","letters":"","vision_linked":"","initiative":"","tax_pct":0,"increase_pct":0,"contractor_engineer":"","contractor_email":"","contractor_phone":"","contractor_rank":"","scope":"","description":"صيانة"},{"id":6,"name":"صيانة أعمال المخططات السكنية","status":"pending","status_raw":"قيد الطرح والترسية","phase":"الطرح والترسية","progress":0,"value":"227,700","value_num":227700,"contractor":"","supervisor":"","consultant":"","pm":"م. محمد جاري القرني","pm_email":"Mgsalq@ars.gov.sa","pm_phone":"0546889994","category":"صيانة سيول","budget_door":"الباب الثالث","contract_no":"","project_no":"","duration_days":360,"extensions":"0","stops":0,"date_sign":"","date_site":"","date_end":"","date_end_adj":"","date_receive_primary":"","date_receive_final":"","date_updated":"2026-04-01","last_action":"","notes":"","letters":"","vision_linked":"","initiative":"","tax_pct":0,"increase_pct":0,"contractor_engineer":"","contractor_email":"","contractor_phone":"","contractor_rank":"","scope":"","description":"صيانة"},{"id":7,"name":"صيانة تصريف مياه الأمطار بلدية بلقرن","status":"pending","status_raw":"قيد الطرح والترسية","phase":"الطرح والترسية","progress":0,"value":"312,225","value_num":312225,"contractor":"","supervisor":"","consultant":"","pm":"م. محمد جاري القرني","pm_email":"Mgsalq@ars.gov.sa","pm_phone":"0546889994","category":"صيانة سيول","budget_door":"الباب الثالث","contract_no":"","project_no":"","duration_days":360,"extensions":"0","stops":0,"date_sign":"","date_site":"","date_end":"","date_end_adj":"","date_receive_primary":"","date_receive_final":"","date_updated":"2026-04-01","last_action":"","notes":"","letters":"","vision_linked":"","initiative":"","tax_pct":0,"increase_pct":0,"contractor_engineer":"","contractor_email":"","contractor_phone":"","contractor_rank":"","scope":"","description":"صيانة"},{"id":8,"name":"أنسنة طريق الملك خالد م١","status":"pending","status_raw":"قيد الطرح والترسية","phase":"الطرح والترسية","progress":0,"value":"4.27 م","value_num":4266308,"contractor":"","supervisor":"","consultant":"","pm":"م. محمد جاري القرني","pm_email":"Mgsalq@ars.gov.sa","pm_phone":"0546889994","category":"صيانة طرق","budget_door":"الباب الثالث","contract_no":"","project_no":"","duration_days":360,"extensions":"0","stops":0,"date_sign":"","date_site":"","date_end":"","date_end_adj":"","date_receive_primary":"","date_receive_final":"","date_updated":"2026-04-01","last_action":"","notes":"","letters":"","vision_linked":"","initiative":"","tax_pct":0,"increase_pct":0,"contractor_engineer":"","contractor_email":"","contractor_phone":"","contractor_rank":"","scope":"","description":"صيانة"},{"id":9,"name":"صيانة طريق آل مجمل","status":"pending","status_raw":"قيد الطرح والترسية","phase":"الطرح والترسية","progress":0,"value":"1.20 م","value_num":1200000,"contractor":"","supervisor":"","consultant":"","pm":"م. محمد جاري القرني","pm_email":"Mgsalq@ars.gov.sa","pm_phone":"0546889994","category":"صيانة طرق","budget_door":"الباب الثالث","contract_no":"","project_no":"","duration_days":360,"extensions":"0","stops":0,"date_sign":"","date_site":"","date_end":"","date_end_adj":"","date_receive_primary":"","date_receive_final":"","date_updated":"2026-04-01","last_action":"","notes":"","letters":"","vision_linked":"","initiative":"","tax_pct":0,"increase_pct":0,"contractor_engineer":"","contractor_email":"","contractor_phone":"","contractor_rank":"","scope":"","description":"صيانة"},{"id":10,"name":"صيانة العبارات والمزلقانات وشبكة تصريف المياه بمحافظة بلقرن","status":"pending","status_raw":"قيد الطرح والترسية","phase":"الطرح والترسية","progress":0,"value":"2.50 م","value_num":2500000,"contractor":"","supervisor":"","consultant":"","pm":"م. محمد جاري القرني","pm_email":"Mgsalq@ars.gov.sa","pm_phone":"0546889994","category":"صيانة سيول","budget_door":"الباب الثالث","contract_no":"","project_no":"","duration_days":360,"extensions":"0","stops":0,"date_sign":"","date_site":"","date_end":"","date_end_adj":"","date_receive_primary":"","date_receive_final":"","date_updated":"2026-04-01","last_action":"","notes":"","letters":"","vision_linked":"","initiative":"","tax_pct":0,"increase_pct":0,"contractor_engineer":"","contractor_email":"","contractor_phone":"","contractor_rank":"","scope":"","description":"صيانة"},{"id":11,"name":"صيانة وسفلتة القرى التابعة لمركز المحافظة","status":"pending","status_raw":"قيد الطرح والترسية","phase":"الطرح والترسية","progress":0,"value":"2.26 م","value_num":2262595,"contractor":"","supervisor":"","consultant":"","pm":"م. محمد جاري القرني","pm_email":"Mgsalq@ars.gov.sa","pm_phone":"0546889994","category":"صيانة طرق","budget_door":"الباب الثالث","contract_no":"","project_no":"","duration_days":360,"extensions":"0","stops":0,"date_sign":"","date_site":"","date_end":"","date_end_adj":"","date_receive_primary":"","date_receive_final":"","date_updated":"2026-04-01","last_action":"","notes":"","letters":"","vision_linked":"","initiative":"","tax_pct":0,"increase_pct":0,"contractor_engineer":"","contractor_email":"","contractor_phone":"","contractor_rank":"","scope":"","description":"صيانة"},{"id":12,"name":"صيانة العبارات وحماية الأودية بمحافظة بلقرن","status":"pending","status_raw":"قيد الطرح والترسية","phase":"الطرح والترسية","progress":0,"value":"1.48 م","value_num":1481105,"contractor":"","supervisor":"","consultant":"","pm":"م. محمد جاري القرني","pm_email":"Mgsalq@ars.gov.sa","pm_phone":"0546889994","category":"صيانة سيول","budget_door":"الباب الثالث","contract_no":"","project_no":"","duration_days":360,"extensions":"0","stops":0,"date_sign":"","date_site":"","date_end":"","date_end_adj":"","date_receive_primary":"","date_receive_final":"","date_updated":"2026-04-01","last_action":"","notes":"","letters":"","vision_linked":"","initiative":"","tax_pct":0,"increase_pct":0,"contractor_engineer":"","contractor_email":"","contractor_phone":"","contractor_rank":"","scope":"","description":"صيانة"}];
+// بيانات المشاريع تُقرأ من ملف خارجي (projects-data.json) لحماية البيانات الشخصية
+const projectsFile = path.join(__dirname, 'projects-data.json');
+if (!fs.existsSync(projectsFile)) {
+  console.error('❌ ملف بيانات المشاريع غير موجود: projects-data.json');
+  console.error('   أنشئ الملف بصيغة JSON تحتوي على مصفوفة المشاريع');
+  process.exit(1);
+}
+const PROJECTS = JSON.parse(fs.readFileSync(projectsFile, 'utf-8'));
+
+// تم نقل بيانات المشاريع إلى ملف projects-data.json المنفصل
 
 // ─── التنفيذ ───
 async function main() {
@@ -193,11 +219,8 @@ async function main() {
   console.log('\n╔═══════════════════════════════════╗');
   console.log('║  ✅ انتهت التهيئة بنجاح!         ║');
   console.log('╠═══════════════════════════════════╣');
-  console.log('║  حسابات تسجيل الدخول:            ║');
-  console.log('║  rb@balqarn.app    Balqarn@2026rb  ║');
-  console.log('║  ms@balqarn.app    Balqarn@2026ms  ║');
-  console.log('║  mm@balqarn.app    Balqarn@2026mm  ║');
-  console.log('║  admin@balqarn.app Balqarn@2026admin║');
+  console.log('║  تم إنشاء الحسابات بنجاح         ║');
+  console.log('║  غيّر كلمات المرور من Firebase Console ║');
   console.log('╚═══════════════════════════════════╝');
 }
 
