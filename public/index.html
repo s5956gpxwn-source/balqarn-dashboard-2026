@@ -756,7 +756,7 @@ function openDetail(id){
       </div>
       <div class="dp-head-actions">
         ${currentUser&&currentUser.role==='admin'?`<button class="dp-edit-btn" onclick="editProject(${p.id})">&#9998; تعديل</button><button class="dp-del-btn" onclick="deleteProject(${p.id})">&#128465; حذف</button>`:''}
-        <button class="dp-edit-btn" style="background:var(--glass);color:var(--text2);border-color:var(--gborder2);" onclick="printDetail()" title="طباعة">&#9113; طباعة</button>
+        <button class="dp-edit-btn" style="background:var(--glass);color:var(--text2);border-color:var(--gborder2);" onclick="printDetail()" title="حفظ كـ PDF أو طباعة">&#9113; PDF / طباعة</button>
         <button class="btn-close" onclick="closeDetail()">&#x2715;</button>
       </div>
     </div>
@@ -855,15 +855,15 @@ body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-
 .dp-name{font-size:17px;font-weight:900;color:#392015;}
 .sbadge{font-size:9px;padding:3px 10px;border-radius:10px;border:1px solid #C4BCB9;display:inline-block;background:#fff;}
 .dp-body{padding:16px 30px 20px;display:flex;flex-direction:column;gap:14px;}
-.dp-section{page-break-inside:avoid;margin-bottom:2px;}
-.dp-section-title{font-size:11px;font-weight:800;color:#614C44;border-bottom:2px solid #E5CFBD;padding-bottom:5px;margin-bottom:8px;letter-spacing:.5px;}
+.dp-section{page-break-inside:avoid;break-inside:avoid;margin-bottom:2px;}
+.dp-section-title{font-size:11px;font-weight:800;color:#614C44;border-bottom:2px solid #E5CFBD;padding-bottom:5px;margin-bottom:8px;letter-spacing:.5px;page-break-after:avoid;break-after:avoid;}
 .dp-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
 .dp-item{border:1px solid #E5CFBD;border-radius:6px;padding:8px 10px;background:#FDFAF7;page-break-inside:avoid;}
 .dp-item.full{grid-column:1/-1;}
 .di-lbl{font-size:8px;color:#887973;margin-bottom:2px;font-weight:700;}
 .di-val{font-size:11px;font-weight:700;color:#392015;}
 .di-val.small{font-size:10px;}
-.dp-prog{border:1px solid #E5CFBD;border-radius:10px;padding:14px;background:#FDFAF7;}
+.dp-prog{border:1px solid #E5CFBD;border-radius:10px;padding:14px;background:#FDFAF7;page-break-inside:avoid;break-inside:avoid;}
 .dp-prog-hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
 .dp-prog-pct{font-size:28px;font-weight:900;}
 .dp-track{height:8px;background:#E5CFBD;border-radius:4px;overflow:hidden;}
@@ -873,7 +873,7 @@ body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-
 .date-item{border:1px solid #E5CFBD;border-radius:6px;padding:6px;text-align:center;background:#FDFAF7;}
 .date-lbl{font-size:7px;color:#887973;margin-bottom:2px;font-weight:700;}
 .date-val{font-size:10px;font-weight:700;}
-.dp-action{border:1px solid #973D4B;border-radius:8px;padding:10px;background:#FFF8F9;}
+.dp-action{border:1px solid #973D4B;border-radius:8px;padding:10px;background:#FFF8F9;page-break-inside:avoid;break-inside:avoid;}
 .dp-action-lbl{font-size:8px;color:#973D4B;font-weight:800;margin-bottom:3px;}
 .dp-action-txt{font-size:11px;font-weight:600;}
 .dp-brief-box{border:1px solid #E5CFBD;border-radius:8px;padding:10px;background:#FDFAF7;}
