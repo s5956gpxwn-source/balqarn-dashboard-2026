@@ -261,10 +261,10 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
         <button class="export-btn admin-only" onclick="document.getElementById('xlsxUpload').click()" title="استيراد Excel" style="display:none">&#128228; استيراد</button>
         <input type="file" id="xlsxUpload" accept=".xlsx,.xls,.csv" style="display:none" onchange="importExcel(this)">
         <button class="export-btn admin-only" onclick="exportExcel()" title="تصدير Excel" style="display:none">&#128229; تصدير</button>
+        <button class="export-btn admin-only" onclick="printDashboard()" style="display:none">&#9113; طباعة / PDF</button>
         <button class="export-btn admin-only" onclick="openFieldsManager()" title="إدارة الأعمدة" style="display:none">&#9881; إخفاء أعمدة</button>
       </div>
       <button class="theme-btn" id="themeToggle" onclick="toggleTheme()" title="تبديل الثيم">&#9790;</button>
-      <button class="export-btn" onclick="printDashboard()">&#9113; طباعة / PDF</button>
       <button class="export-btn" onclick="doLogout()" title="تسجيل خروج">&#x2190; خروج</button>
     </div>
   </div>
@@ -883,17 +883,19 @@ body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-
 .dp-brief-txt,.dp-notes-txt{font-size:11px;font-weight:600;}
 .dp-notes-box{border:1px solid #C89A6F;border-radius:8px;padding:10px;background:#FFFBF5;break-inside:avoid;}
 .dp-letters{border:1px solid #E5CFBD;border-radius:8px;padding:10px;background:#FDFAF7;font-size:10px;line-height:1.8;}
-.print-footer{margin-top:30px;padding:16px 30px;border-top:2px solid #E5CFBD;display:flex;align-items:center;justify-content:center;gap:10px;}
-.print-footer img{height:32px;opacity:.6;}
-.print-footer span{font-size:11px;color:#614C44;font-weight:700;}
+.print-footer{margin-top:30px;padding:0 30px;text-align:center;}
+.print-footer .orn-bar{width:100%;height:20px;margin-bottom:10px;opacity:.3;}
+.print-footer .sig-line{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 0;}
+.print-footer .sig-line img{height:32px;opacity:.6;}
+.print-footer .sig-line span{font-size:11px;color:#614C44;font-weight:700;}
 @page{size:A4;margin:0;}
 @media print{body{padding:12mm 10mm;}
-.dp-item,.date-item,.dp-action,.dp-brief-box,.dp-notes-box,.dp-prog,.dp-section,.dp-head,.dp-letters,.print-header,.print-footer{break-inside:avoid!important;}
+.dp-item,.date-item,.dp-action,.dp-brief-box,.dp-notes-box,.dp-prog,.dp-head,.dp-letters,.print-header,.print-footer{break-inside:avoid!important;}
 .dp-section-title{break-after:avoid!important;}}`;
 const now=new Date();const dateStr=now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+(now.getHours()%12||12)+':'+(now.getMinutes()<10?'0':'')+now.getMinutes()+' '+(now.getHours()>=12?'م':'ص');
 const header='<div class="print-header"><img src="'+logoSrc+'" alt=""><div class="print-header-title">تقرير مشروع - '+projName.replace(/</g,'&lt;')+'</div></div><div class="print-date">تاريخ الطباعة: '+dateStr+'</div>';
 const sigSrc=document.querySelector('.sig-img')?.src||'assets/ornaments/developer_sig.png';
-const footer='<div class="print-footer"><img src="'+sigSrc+'" alt=""><span>م. محمد مرعي القرني</span></div>';
+const footer='<div class="print-footer"><img class="orn-bar" src="assets/ornaments/footer_bar.png" alt=""><div class="sig-line"><img src="'+sigSrc+'" alt=""><span>م. محمد مرعي القرني</span></div></div>';
 const w=window.open('','_blank');
 w.document.write('<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>تقرير مشروع - '+projName.replace(/</g,'')+'</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;600;700;800&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>'+header+panel.innerHTML+footer+'</body></html>');
 w.document.close();setTimeout(()=>{w.print();w.close();},700);}
@@ -940,9 +942,11 @@ th{background:#392015;color:#F2E7DE;padding:6px 8px;font-weight:700;font-size:9p
 td{padding:5px 8px;border-bottom:1px solid #E5CFBD;vertical-align:top;}
 tr:nth-child(even){background:#FDFAF7;}
 tr{break-inside:avoid;}
-.print-footer{margin-top:20px;padding:12px 24px;border-top:2px solid #E5CFBD;display:flex;align-items:center;justify-content:center;gap:10px;}
-.print-footer img{height:28px;opacity:.6;}
-.print-footer span{font-size:10px;color:#614C44;font-weight:700;}
+.print-footer{margin-top:20px;padding:0 24px;text-align:center;}
+.print-footer .orn-bar{width:100%;height:18px;margin-bottom:8px;opacity:.3;}
+.print-footer .sig-line{display:flex;align-items:center;justify-content:center;gap:10px;padding:8px 0;}
+.print-footer .sig-line img{height:28px;opacity:.6;}
+.print-footer .sig-line span{font-size:10px;color:#614C44;font-weight:700;}
 @page{size:A4 landscape;margin:0;}
 @media print{body{padding:10mm 8mm;}}`;
 const html=`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
@@ -955,7 +959,7 @@ ${kpiHtml}
 <div class="filter-label">${filterLabel} (${filtered.length})</div>
 <table><thead><tr><th>#</th><th>اسم المشروع</th><th>الحالة</th><th>المقاول</th><th>الإنجاز</th><th>القيمة التعاقدية</th><th>انتهاء العقد</th><th>آخر إجراء</th></tr></thead>
 <tbody>${tableRows}</tbody></table>
-<div class="print-footer"><img src="${sigSrc}" alt=""><span>م. محمد مرعي القرني</span></div>
+<div class="print-footer"><img class="orn-bar" src="assets/ornaments/footer_bar.png" alt=""><div class="sig-line"><img src="${sigSrc}" alt=""><span>م. محمد مرعي القرني</span></div></div>
 </body></html>`;
 const w=window.open('','_blank');w.document.write(html);w.document.close();
 setTimeout(()=>{w.print();w.close();},700);}
