@@ -1,10 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // المستخدمون - قراءة فقط للمستخدم نفسه
+    // المستخدمون - قراءة للمستخدم نفسه، تعديل حقل الثيم فقط
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if false;
+      allow update: if request.auth != null && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['theme']);
+      allow create, delete: if false;
     }
     // المشاريع - قراءة لأي مستخدم مسجل، كتابة للأدمن فقط
     match /projects/{projectId} {
