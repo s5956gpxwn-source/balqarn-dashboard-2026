@@ -843,13 +843,17 @@ function closeDetail(){document.getElementById('detailOverlay').classList.remove
 function printDetail(){
 const panel=document.getElementById('detailPanel');
 const projName=panel.querySelector('.dp-name')?.textContent||'مشروع';
+const logoSrc=document.querySelector('.logo-img')?.src||'BB.png';
 const css=`*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:20px 30px;color:#392015;font-size:11px;line-height:1.5;direction:rtl;background:#fff;}
+body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-size:11px;line-height:1.5;direction:rtl;background:#fff;}
+.print-header{display:flex;align-items:center;gap:12px;padding:20px 30px;border-bottom:3px solid #392015;}
+.print-header img{height:60px;}
+.print-header-title{font-size:14px;font-weight:800;color:#392015;flex:1;}
 .dp-head-actions,.btn-close,.dp-edit-btn,.dp-del-btn,.dp-head-orn,.dp-section-orn,.dp-item-orn{display:none!important;}
-.dp-head{padding:16px 0 12px;background:none!important;backdrop-filter:none!important;border-bottom:2px solid #E5CFBD;position:relative;}
+.dp-head{padding:16px 30px 12px;background:#F9F3EE!important;backdrop-filter:none!important;border-bottom:2px solid #E5CFBD;position:relative;}
 .dp-name{font-size:17px;font-weight:900;color:#392015;}
 .sbadge{font-size:9px;padding:3px 10px;border-radius:10px;border:1px solid #C4BCB9;display:inline-block;background:#fff;}
-.dp-body{padding:16px 0 20px;display:flex;flex-direction:column;gap:14px;}
+.dp-body{padding:16px 30px 20px;display:flex;flex-direction:column;gap:14px;}
 .dp-section{margin-bottom:2px;}
 .dp-section-title{font-size:11px;font-weight:800;color:#614C44;border-bottom:2px solid #E5CFBD;padding-bottom:5px;margin-bottom:8px;letter-spacing:.5px;page-break-after:avoid;break-after:avoid;}
 .dp-section-title::after{content:'';display:block;height:60px;margin-bottom:-60px;}
@@ -877,15 +881,16 @@ body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:20px 30px;color:#3920
 .dp-brief-txt,.dp-notes-txt{font-size:11px;font-weight:600;}
 .dp-notes-box{border:1px solid #C89A6F;border-radius:8px;padding:10px;background:#FFFBF5;break-inside:avoid;}
 .dp-letters{border:1px solid #E5CFBD;border-radius:8px;padding:10px;background:#FDFAF7;font-size:10px;line-height:1.8;}
-.print-footer{margin-top:30px;padding:16px 0;border-top:2px solid #E5CFBD;display:flex;align-items:center;justify-content:center;gap:10px;}
+.print-footer{margin-top:30px;padding:16px 30px;border-top:2px solid #E5CFBD;display:flex;align-items:center;justify-content:center;gap:10px;}
 .print-footer img{height:32px;opacity:.6;}
 .print-footer span{font-size:11px;color:#614C44;font-weight:700;}
-@page{size:A4;margin:15mm 12mm;}
-@media print{body{padding:10px 20px;}}`;
+@page{size:A4;margin:0;}
+@media print{body{padding:12mm 10mm;}}`;
+const header='<div class="print-header"><img src="'+logoSrc+'" alt=""><div class="print-header-title">تقرير مشروع - '+projName.replace(/</g,'&lt;')+'</div></div>';
 const sigSrc=document.querySelector('.sig-img')?.src||'assets/ornaments/developer_sig.png';
 const footer='<div class="print-footer"><img src="'+sigSrc+'" alt=""><span>م. محمد مرعي القرني</span></div>';
 const w=window.open('','_blank');
-w.document.write('<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>تقرير مشروع - '+projName.replace(/</g,'')+'</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;600;700;800&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>'+panel.innerHTML+footer+'</body></html>');
+w.document.write('<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>تقرير مشروع - '+projName.replace(/</g,'')+'</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;600;700;800&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>'+header+panel.innerHTML+footer+'</body></html>');
 w.document.close();setTimeout(()=>{w.print();w.close();},700);}
 window.printDetail=printDetail;
 document.getElementById('detailOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDetail();});
