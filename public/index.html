@@ -261,7 +261,7 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
         <button class="export-btn admin-only" onclick="document.getElementById('xlsxUpload').click()" title="استيراد Excel" style="display:none">&#128228; استيراد</button>
         <input type="file" id="xlsxUpload" accept=".xlsx,.xls,.csv" style="display:none" onchange="importExcel(this)">
         <button class="export-btn admin-only" onclick="exportExcel()" title="تصدير Excel" style="display:none">&#128229; تصدير</button>
-        <button class="export-btn admin-only" onclick="printDashboard()" style="display:none">&#9113; طباعة / PDF</button>
+        <button class="export-btn admin-only" onclick="openPrintSettings()" style="display:none">&#9113; طباعة / PDF</button>
         <button class="export-btn admin-only" onclick="openFieldsManager()" title="إدارة الأعمدة" style="display:none">&#9881; إخفاء أعمدة</button>
       </div>
       <button class="theme-btn" id="themeToggle" onclick="toggleTheme()" title="تبديل الثيم">&#9790;</button>
@@ -896,7 +896,67 @@ w.document.write('<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><ti
 w.document.close();setTimeout(()=>{w.print();w.close();},700);}
 window.printDetail=printDetail;
 
+const PRINT_COLS=[
+{key:'name',label:'اسم المشروع',get:p=>p.name||'',style:'font-weight:700;',on:true},
+{key:'status',label:'الحالة',get:p=>`<span style="color:${COLORS[p.status]||'#333'};font-weight:700;">${LABELS[p.status]||''}</span>`,style:'',on:true},
+{key:'contractor',label:'المقاول',get:p=>p.contractor||'',style:'',on:true},
+{key:'progress',label:'الإنجاز',get:p=>(Number.isInteger(p.progress)?p.progress:p.progress.toFixed(2))+'%',style:'text-align:center;font-weight:700;',on:true},
+{key:'value_num',label:'القيمة التعاقدية',get:p=>p.value_num?p.value_num.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'',style:'text-align:left;',on:true},
+{key:'date_end',label:'انتهاء العقد',get:p=>p.date_end||'',style:'text-align:center;',on:true},
+{key:'last_action',label:'آخر إجراء',get:p=>p.last_action||'',style:'font-size:9px;',on:true},
+{key:'pm',label:'مدير المشروع',get:p=>p.pm||'',style:'',on:false},
+{key:'category',label:'التصنيف',get:p=>p.category||'',style:'',on:false},
+{key:'contract_no',label:'رقم العقد',get:p=>p.contract_no||'',style:'',on:false},
+{key:'duration_days',label:'المدة التعاقدية',get:p=>p.duration_days?p.duration_days+' يوم':'',style:'text-align:center;',on:false},
+{key:'elapsed_pct',label:'المدة المنقضية',get:p=>p.elapsed_pct?p.elapsed_pct+'%':'',style:'text-align:center;',on:false},
+{key:'delay_pct',label:'نسبة التأخير',get:p=>p.delay_pct?p.delay_pct+'%':'',style:'text-align:center;',on:false},
+{key:'supervisor',label:'جهة الإشراف',get:p=>p.supervisor||'',style:'',on:false},
+{key:'notes',label:'ملاحظات',get:p=>p.notes||'',style:'font-size:9px;',on:false},
+{key:'sector',label:'القطاع',get:p=>p.sector||'',style:'',on:false},
+{key:'project_brief',label:'نبذة عن المشروع',get:p=>p.project_brief||'',style:'font-size:9px;',on:false}
+];
+function getPrintSettings(){try{const s=JSON.parse(localStorage.getItem('printCols'));if(s&&typeof s==='object')return s;}catch(e){}return{};}
+function savePrintSettings(settings){try{localStorage.setItem('printCols',JSON.stringify(settings));}catch(e){}}
+
+function openPrintSettings(){
+  const saved=getPrintSettings();
+  const cols=PRINT_COLS.map(c=>({...c,on:saved.hasOwnProperty(c.key)?saved[c.key]:c.on}));
+  const panel=document.getElementById('detailPanel');
+  panel.innerHTML=`
+    <div class="dp-head">
+      <div><div class="dp-name">إعدادات طباعة التقرير الشامل</div><div style="margin-top:4px;font-size:11px;color:var(--text3)">اختر الأعمدة التي تظهر في التقرير — تُحفظ تلقائياً</div></div>
+      <div class="dp-head-actions"><button class="btn-close" onclick="closeDetail()">&#x2715;</button></div>
+    </div>
+    <div class="dp-body">
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${cols.map(c=>`
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--glass);border:1px solid var(--gborder);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text);">
+            <input type="checkbox" ${c.on?'checked':''} onchange="togglePrintCol('${c.key}',this.checked)" style="width:16px;height:16px;accent-color:var(--advanced);">
+            <span style="flex:1">${c.label}</span>
+            <span style="font-size:10px;color:${c.on?'var(--advanced)':'var(--text4)'};">${c.on?'يظهر':'مخفي'}</span>
+          </label>
+        `).join('')}
+      </div>
+      <div class="dp-form-actions">
+        <button class="dp-save-btn" onclick="closeDetail();printDashboard();">&#9113; طباعة التقرير الآن</button>
+        <button class="dp-cancel-btn" onclick="closeDetail()">إغلاق</button>
+      </div>
+    </div>`;
+  document.getElementById('detailOverlay').classList.add('open');
+  panel.scrollTop=0;
+}
+function togglePrintCol(key,on){
+  const saved=getPrintSettings();
+  saved[key]=on;
+  savePrintSettings(saved);
+  openPrintSettings();
+}
+window.openPrintSettings=openPrintSettings;
+window.togglePrintCol=togglePrintCol;
+
 function printDashboard(){
+const saved=getPrintSettings();
+const activeCols=PRINT_COLS.filter(c=>saved.hasOwnProperty(c.key)?saved[c.key]:c.on);
 const logoSrc=document.querySelector('.logo-img')?.src||'BB.png';
 const sigSrc=document.querySelector('.sig-img')?.src||'assets/ornaments/developer_sig.png';
 const now=new Date();const dateStr=now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+(now.getHours()%12||12)+':'+(now.getMinutes()<10?'0':'')+now.getMinutes()+' '+(now.getHours()>=12?'م':'ص');
@@ -911,16 +971,7 @@ const kpiHtml=`<div class="kpi-grid">
 ${Object.entries(cnt).filter(([,v])=>v>0).map(([s,v])=>`<div class="kpi-box" style="border-top:3px solid ${COLORS[s]};"><div class="kv" style="color:${COLORS[s]}">${v}</div><div class="kl">${LABELS[s]}</div></div>`).join('')}
 <div class="kpi-box" style="border-top:3px solid #887973;"><div class="kv" style="font-size:12px;">${totalVal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div><div class="kl">إجمالي قيم العقود (ريال)</div></div>
 </div>`;
-const tableRows=filtered.map((p,i)=>`<tr>
-<td>${i+1}</td>
-<td style="font-weight:700;">${p.name||''}</td>
-<td><span style="color:${COLORS[p.status]||'#333'};font-weight:700;">${LABELS[p.status]||''}</span></td>
-<td>${p.contractor||''}</td>
-<td style="text-align:center;font-weight:700;color:${COLORS[p.status]||'#333'}">${Number.isInteger(p.progress)?p.progress:p.progress.toFixed(2)}%</td>
-<td style="text-align:left;">${p.value_num?p.value_num.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</td>
-<td style="text-align:center;">${p.date_end||''}</td>
-<td style="font-size:9px;">${p.last_action||''}</td>
-</tr>`).join('');
+const tableRows=filtered.map((p,i)=>`<tr><td>${i+1}</td>${activeCols.map(c=>`<td style="${c.style}">${c.get(p)}</td>`).join('')}</tr>`).join('');
 const css=`*{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-size:10px;line-height:1.4;direction:rtl;background:#fff;}
 .print-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:3px solid #392015;}
@@ -948,7 +999,7 @@ const html=`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
 <div class="print-date">تاريخ الطباعة: ${dateStr}</div>
 ${kpiHtml}
 <div class="filter-label">${filterLabel} (${filtered.length})</div>
-<table><thead><tr><th>#</th><th>اسم المشروع</th><th>الحالة</th><th>المقاول</th><th>الإنجاز</th><th>القيمة التعاقدية</th><th>انتهاء العقد</th><th>آخر إجراء</th></tr></thead>
+<table><thead><tr><th>#</th>${activeCols.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead>
 <tbody>${tableRows}</tbody></table>
 </body></html>`;
 const w=window.open('','_blank');w.document.write(html);w.document.close();
