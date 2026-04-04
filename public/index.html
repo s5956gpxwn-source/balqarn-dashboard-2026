@@ -32,11 +32,12 @@ main{padding:20px 28px 0;max-width:1440px;margin:0 auto;}
 .kpi{border-radius:16px;padding:16px 18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--gborder);}
 .kpi:hover{transform:translateY(-3px);box-shadow:0 14px 32px var(--shadow);background:var(--glass2);border-color:var(--gborder2);}
 .kpi.active-f{border-color:var(--gborder2);box-shadow:0 0 0 2px var(--gborder2);}
-.kpi-orn{position:absolute;bottom:6px;left:6px;width:52px;height:52px;object-fit:contain;opacity:.07;pointer-events:none;transition:opacity .3s,transform .4s;}
+.kpi-orn{position:absolute;bottom:6px;left:6px;width:52px;height:52px;object-fit:contain;opacity:.12;pointer-events:none;transition:opacity .3s,transform .4s;}
 body.dark .kpi-orn,body.dark .card-orn,body.dark .chart-orn,body.dark .dp-head-orn,body.dark .dp-section-orn,body.dark .login-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue-rotate(340deg) brightness(1.8);opacity:.10;}
 body.dark .kpi:hover .kpi-orn{opacity:.20;}
-body.dark .proj-card:hover .card-orn{opacity:.14;}
-.kpi:hover .kpi-orn{opacity:.16;transform:scale(1.08) rotate(-4deg);}
+body.dark .proj-card:hover .card-orn{opacity:.18;transform:translate(-50%,-50%) scale(1.08) rotate(-4deg);}
+body.dark .chart-card:hover .chart-orn{opacity:.18;transform:translate(-50%,-50%) scale(1.08) rotate(-4deg);}
+.kpi:hover .kpi-orn{opacity:.22;transform:scale(1.08) rotate(-4deg);}
 .kpi.active-f .kpi-orn{opacity:.20;}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0;}
 .kpi-all::before{background:var(--text3);}.kpi-advanced::before{background:var(--advanced);}.kpi-regular::before{background:var(--regular);}.kpi-pending::before{background:var(--pending);}.kpi-stopped::before{background:var(--stopped);}.kpi-late::before{background:var(--late);}.kpi-stalled::before{background:var(--stalled);}.kpi-preceipt::before{background:var(--preceipt);}.kpi-value::before{background:var(--text3);}
@@ -51,7 +52,8 @@ body.dark .proj-card:hover .card-orn{opacity:.14;}
 .alert-text strong{font-size:13px;display:block;margin-bottom:2px;}
 .charts-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;margin-bottom:16px;}
 .chart-card{border-radius:16px;padding:14px;background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--gborder);transition:var(--tr);position:relative;overflow:hidden;}
-.chart-orn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;object-fit:contain;opacity:.04;pointer-events:none;}
+.chart-orn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;object-fit:contain;opacity:.08;pointer-events:none;transition:opacity .3s,transform .4s;}
+.chart-card:hover .chart-orn{opacity:.14;transform:translate(-50%,-50%) scale(1.08) rotate(-4deg);}
 .chart-title{font-size:11px;font-weight:800;color:var(--text3);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--gborder);letter-spacing:.6px;text-transform:uppercase;}
 .donut-wrap{display:flex;align-items:flex-start;gap:12px;}
 svg.donut{flex-shrink:0;transform:rotate(-90deg);}
@@ -79,7 +81,7 @@ svg.donut{flex-shrink:0;transform:rotate(-90deg);}
 .orn-div{display:flex;align-items:center;gap:10px;margin:14px 0;}
 .orn-div-line{flex:1;height:1px;background:var(--gborder);}
 .orn-icon{width:22px;height:22px;object-fit:contain;opacity:.22;flex-shrink:0;}
-body.light .orn-icon{filter:none;opacity:.18;}
+body.light .orn-icon{filter:none;opacity:.25;}
 body.dark{--overlay-bg:rgba(0,0,0,.65);--bg:#1A120E;--bg2:#241A14;--glass:rgba(35,25,18,0.65);--glass2:rgba(45,32,24,0.82);--gborder:rgba(210,190,170,0.13);--gborder2:rgba(210,190,170,0.28);--text:#F2E7DE;--text2:#D4C4B8;--text3:#A89888;--text4:#6B5B50;--advanced:#00B89A;--advancedt:rgba(0,184,154,0.15);--regular:#7DC8BD;--regulart:rgba(125,200,189,0.15);--pending:#C89A6F;--pendingt:rgba(200,154,111,0.15);--stopped:#F0BF96;--stoppedt:rgba(240,191,150,0.15);--late:#E8D5DA;--latet:rgba(232,213,218,0.15);--stalled:#C96070;--stalledt:rgba(201,96,112,0.15);--preceipt:#E0C4A6;--preceiptt:rgba(224,196,166,0.15);--shadow:rgba(0,0,0,0.30);--sig-filter:brightness(0) invert(1) sepia(1) saturate(0.5) hue-rotate(340deg) brightness(0.9);--sig-op:0.45;}
 body.dark .orn-icon{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue-rotate(340deg) brightness(1.8);opacity:.25;}
 body.dark .orn-bar img{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue-rotate(340deg) brightness(1.8);opacity:.15;}
@@ -100,8 +102,8 @@ body.dark .orn-bar img{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 .proj-card{border-radius:16px;padding:18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;animation:fadeIn .4s ease both;background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--gborder);}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 .proj-card:hover{transform:translateY(-3px);box-shadow:0 16px 40px var(--shadow);background:var(--glass2);border-color:var(--gborder2);}
-.card-orn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90px;height:90px;object-fit:contain;opacity:.04;pointer-events:none;transition:opacity .3s;}
-.proj-card:hover .card-orn{opacity:.08;}
+.card-orn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90px;height:90px;object-fit:contain;opacity:.08;pointer-events:none;transition:opacity .3s,transform .4s;}
+.proj-card:hover .card-orn{opacity:.14;transform:translate(-50%,-50%) scale(1.08) rotate(-4deg);}
 .card-stripe{position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0;}
 .s-advanced{background:var(--advanced);}.s-regular{background:var(--regular);}.s-pending{background:var(--pending);}.s-stopped{background:var(--stopped);}.s-late{background:var(--late);}.s-stalled{background:var(--stalled);}.s-preceipt{background:var(--preceipt);}
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
@@ -136,7 +138,7 @@ footer{margin-top:40px;}
 .detail-panel{background:var(--bg);border:1px solid var(--gborder2);border-radius:22px;width:92%;max-width:680px;max-height:92vh;overflow-y:auto;transform:translateY(14px);transition:transform .3s;}
 .overlay.open .detail-panel{transform:translateY(0);}
 .dp-head{padding:22px 26px 14px;border-bottom:1px solid var(--gborder);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:sticky;top:0;background:var(--bg);backdrop-filter:blur(20px);z-index:10;overflow:hidden;}
-.dp-head-orn{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:80px;height:80px;object-fit:contain;opacity:.04;pointer-events:none;}
+.dp-head-orn{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:80px;height:80px;object-fit:contain;opacity:.08;pointer-events:none;}
 .dp-name{font-size:15px;font-weight:900;color:var(--text);flex:1;line-height:1.4;}
 .btn-close{background:var(--glass2);border:1px solid var(--gborder);color:var(--text2);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
 .dp-body{padding:18px 26px 26px;display:flex;flex-direction:column;gap:14px;}
@@ -150,7 +152,7 @@ footer{margin-top:40px;}
 .dp-action-lbl{font-size:10px;color:var(--stalled);font-weight:800;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;}
 .dp-action-txt{font-size:13px;color:var(--text);font-weight:600;line-height:1.6;}
 .dp-section{position:relative;overflow:hidden;}
-.dp-section-orn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:120px;height:120px;object-fit:contain;opacity:.03;pointer-events:none;}
+.dp-section-orn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:120px;height:120px;object-fit:contain;opacity:.07;pointer-events:none;}
 .dp-section-title{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--gborder);}
 .dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .dp-item{background:var(--glass);border:1px solid var(--gborder);border-radius:11px;padding:12px;position:relative;overflow:hidden;}
@@ -187,7 +189,7 @@ footer{margin-top:40px;}
 .auth-loading-spinner{width:36px;height:36px;border:3px solid var(--gborder);border-top:3px solid var(--advanced);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .login-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .4s;overflow:hidden;}
-.login-orn{position:absolute;width:200px;height:200px;object-fit:contain;opacity:.04;pointer-events:none;}
+.login-orn{position:absolute;width:200px;height:200px;object-fit:contain;opacity:.08;pointer-events:none;}
 .login-orn-1{top:10%;right:5%;}
 .login-orn-2{bottom:10%;left:5%;}
 .login-orn-3{top:50%;left:10%;transform:translateY(-50%);}
@@ -216,7 +218,7 @@ body.dark .card-notes{color:var(--preceipt);}
 .dp-notes-box{background:var(--pendingt);border:1px solid var(--pending);border-radius:12px;padding:14px 16px;}
 .dp-notes-lbl{font-size:10px;color:var(--pending);font-weight:800;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;}
 .dp-notes-txt{font-size:13px;color:var(--pending);font-weight:600;line-height:1.6;}
-.dp-item-orn{position:absolute;bottom:4px;left:4px;width:32px;height:32px;object-fit:contain;opacity:.05;pointer-events:none;}
+.dp-item-orn{position:absolute;bottom:4px;left:4px;width:32px;height:32px;object-fit:contain;opacity:.09;pointer-events:none;}
 body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue-rotate(340deg) brightness(1.8);opacity:.08;}
 .theme-btn{background:var(--glass);border:1px solid var(--gborder);color:var(--text3);width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
 .theme-btn:hover{background:var(--glass2);border-color:var(--gborder2);color:var(--text);}
@@ -781,21 +783,21 @@ function openDetail(id){
         </div>
       </div>`:''}
 
-      ${(()=>{const c=row('القطاع',p.sector)+row('البلدية',p.municipality)+row('رقم العقد',p.contract_no)+row('الرقم المرجعي',p.reference_no)+row('رقم مشروعات',p.project_no!='لاينطبق'?p.project_no:'')+row('فئة الأصل الرئيسية',p.category)+row('فئة الأصل الفرعية',p.category_sub)+row('باب الميزانية',p.budget_door)+row('رقم بند الميزانية',p.budget_code)+row('وصف بند الميزانية',p.budget_desc)+row('المرحلة الفرعية',p.sub_phase)+row('الأولوية',p.priority)+row('نطاق الاعمال',p.scope)+row('الوصف',p.description)+row('الحالة في مشروعات',p.status_mashroat)+row('قيد الترسية',p.is_bidding);return c?`<div class="dp-section"><img class="dp-section-orn" src="${ORNS['tawq']}" alt=""><div class="dp-section-title">بيانات المشروع</div><div class="dp-grid">${c}</div></div>`:''})()}
+      ${(()=>{const c=row('القطاع',p.sector)+row('البلدية',p.municipality)+row('رقم العقد',p.contract_no)+row('الرقم المرجعي',p.reference_no)+row('رقم مشروعات',p.project_no!='لاينطبق'?p.project_no:'')+row('فئة الأصل الرئيسية',p.category)+row('فئة الأصل الفرعية',p.category_sub)+row('باب الميزانية',p.budget_door)+row('رقم بند الميزانية',p.budget_code)+row('وصف بند الميزانية',p.budget_desc)+row('المرحلة الفرعية',p.sub_phase)+row('الأولوية',p.priority)+row('نطاق الاعمال',p.scope)+row('الوصف',p.description)+row('الحالة في مشروعات',p.status_mashroat)+row('قيد الترسية',p.is_bidding);return c?`<div class="dp-section"><div class="dp-section-title">بيانات المشروع</div><div class="dp-grid">${c}</div></div>`:''})()}
 
-      ${(()=>{const c=row('القيمة التعاقدية',p.value_num?fmt(p.value_num):'',false,true)+row('إجمالي قيمة العقد المعدل',p.value_adjusted?fmt(p.value_adjusted):'',false,true)+row('قيمة جدول الكميات',p.boq_value?fmt(p.boq_value):'',false,true)+(p.duration_after_ext&&p.duration_after_ext!==p.duration_days?row('المدة بعد التمديد',p.duration_after_ext+' يوم'):row('المدة التعاقدية',p.duration_days?p.duration_days+' يوم':''))+row('التمديد الأول',p.ext1)+row('التمديد الثاني',p.ext2)+row('التمديد الثالث',p.ext3)+row('نسبة الضريبة',p.tax_pct?parseFloat(Number(p.tax_pct).toFixed(2))+'%':'')+row('نسبة الزيادة',p.increase_pct?parseFloat(Number(p.increase_pct).toFixed(2))+'%':'')+row('نسبة التخفيض',p.discount_pct?parseFloat(Number(p.discount_pct).toFixed(2))+'%':'')+row('قيمة الضمان النهائي',p.guarantee_value?fmt(p.guarantee_value):'',false,true)+row('قيمة الدفعة المقدمة',p.advance_payment?fmt(p.advance_payment):'',false,true)+(p.elapsed_ext_pct&&p.elapsed_ext_pct!==p.elapsed_pct?row('نسبة المدة المنقضية بعد التمديد والايقافات',parseFloat(Number(p.elapsed_ext_pct).toFixed(2))+'%'):row('نسبة المدة المنقضية',p.elapsed_pct?parseFloat(Number(p.elapsed_pct).toFixed(2))+'%':''))+row('نسبة التأخير',p.delay_pct?'<span style="color:var(--'+p.status+');font-weight:700">'+parseFloat(Number(p.delay_pct).toFixed(2))+'%</span> <span style="color:var(--'+p.status+')">('+escapeHtml(p.status_raw)+')</span>':'',false,true);return c?`<div class="dp-section"><img class="dp-section-orn" src="${ORNS['jabal']}" alt=""><div class="dp-section-title">البيانات المالية</div><div class="dp-grid">${c}</div></div>`:''})()}
+      ${(()=>{const c=row('القيمة التعاقدية',p.value_num?fmt(p.value_num):'',false,true)+row('إجمالي قيمة العقد المعدل',p.value_adjusted?fmt(p.value_adjusted):'',false,true)+row('قيمة جدول الكميات',p.boq_value?fmt(p.boq_value):'',false,true)+(p.duration_after_ext&&p.duration_after_ext!==p.duration_days?row('المدة بعد التمديد',p.duration_after_ext+' يوم'):row('المدة التعاقدية',p.duration_days?p.duration_days+' يوم':''))+row('التمديد الأول',p.ext1)+row('التمديد الثاني',p.ext2)+row('التمديد الثالث',p.ext3)+row('نسبة الضريبة',p.tax_pct?parseFloat(Number(p.tax_pct).toFixed(2))+'%':'')+row('نسبة الزيادة',p.increase_pct?parseFloat(Number(p.increase_pct).toFixed(2))+'%':'')+row('نسبة التخفيض',p.discount_pct?parseFloat(Number(p.discount_pct).toFixed(2))+'%':'')+row('قيمة الضمان النهائي',p.guarantee_value?fmt(p.guarantee_value):'',false,true)+row('قيمة الدفعة المقدمة',p.advance_payment?fmt(p.advance_payment):'',false,true)+(p.elapsed_ext_pct&&p.elapsed_ext_pct!==p.elapsed_pct?row('نسبة المدة المنقضية بعد التمديد والايقافات',parseFloat(Number(p.elapsed_ext_pct).toFixed(2))+'%'):row('نسبة المدة المنقضية',p.elapsed_pct?parseFloat(Number(p.elapsed_pct).toFixed(2))+'%':''))+row('نسبة التأخير',p.delay_pct?'<span style="color:var(--'+p.status+');font-weight:700">'+parseFloat(Number(p.delay_pct).toFixed(2))+'%</span> <span style="color:var(--'+p.status+')">('+escapeHtml(p.status_raw)+')</span>':'',false,true);return c?`<div class="dp-section"><div class="dp-section-title">البيانات المالية</div><div class="dp-grid">${c}</div></div>`:''})()}
 
-      ${(()=>{const c=row('عدد الإنذارات',p.warnings_count?p.warnings_count:'')+row('مجموع الإيقافات (عدد الإيقافات)',p.stops?p.stops:'')+row('أيام التصحيح',p.correction_days?p.correction_days:'')+row('المشروع موقوف',p.is_stopped)+row('تم الاستلام ابتدائيا',p.is_received_primary);return c?`<div class="dp-section"><img class="dp-section-orn" src="${ORNS['bayt']}" alt=""><div class="dp-section-title">الإنذارات والإيقافات</div><div class="dp-grid">${c}</div></div>`:''})()}
+      ${(()=>{const c=row('عدد الإنذارات',p.warnings_count?p.warnings_count:'')+row('مجموع الإيقافات (عدد الإيقافات)',p.stops?p.stops:'')+row('أيام التصحيح',p.correction_days?p.correction_days:'')+row('المشروع موقوف',p.is_stopped)+row('تم الاستلام ابتدائيا',p.is_received_primary);return c?`<div class="dp-section"><div class="dp-section-title">الإنذارات والإيقافات</div><div class="dp-grid">${c}</div></div>`:''})()}
 
-      ${(()=>{const c=row('مرتبط بالرؤية',p.vision_linked)+row('اسم برنامج الرؤية',p.vision_program)+row('مرتبط بمبادرة',p.initiative_linked)+row('اسم المبادرة',p.initiative)+row('مرتبط بمشروع آخر',p.linked_project)+row('اسم المشروع المرتبط',p.linked_project_name);return c?`<div class="dp-section"><img class="dp-section-orn" src="${ORNS['qit']}" alt=""><div class="dp-section-title">الرؤية والمبادرات</div><div class="dp-grid">${c}</div></div>`:''})()}
+      ${(()=>{const c=row('مرتبط بالرؤية',p.vision_linked)+row('اسم برنامج الرؤية',p.vision_program)+row('مرتبط بمبادرة',p.initiative_linked)+row('اسم المبادرة',p.initiative)+row('مرتبط بمشروع آخر',p.linked_project)+row('اسم المشروع المرتبط',p.linked_project_name);return c?`<div class="dp-section"><div class="dp-section-title">الرؤية والمبادرات</div><div class="dp-grid">${c}</div></div>`:''})()}
 
-      ${(()=>{const c=dtrow('اعتماد العروض',p.date_offers_approval)+dtrow('توقيع العقد',p.date_sign)+dtrow('تسليم الموقع',p.date_site)+dtrow('انتهاء العقد',p.date_end)+dtrow('الانتهاء المعدل',p.date_end_adj)+dtrow('الاستلام الابتدائي',p.date_receive_primary)+dtrow('الاستلام الابتدائي المعدل',p.date_receive_primary_adj)+dtrow('الاستلام النهائي',p.date_receive_final)+dtrow('آخر تحديث',p.date_updated)+dtrow('بداية الإيقاف الأول',p.date_stop1_start)+dtrow('تاريخ الاستئناف الأول',p.date_stop1_end)+dtrow('بداية الإيقاف الثاني',p.date_stop2_start)+dtrow('تاريخ نهاية الاستئناف الثاني',p.date_stop2_end)+dtrow('بداية الإيقاف الثالث',p.date_stop3_start)+dtrow('تاريخ نهاية الاستئناف الثالث',p.date_stop3_end)+dtrow('الإنذار الأول',p.date_warning1)+dtrow('الإنذار الثاني',p.date_warning2)+dtrow('الإنذار الثالث',p.date_warning3)+dtrow('سحب المشروع',p.date_withdrawal);return c?`<div class="dp-section"><img class="dp-section-orn" src="${ORNS['arda']}" alt=""><div class="dp-section-title">التواريخ</div><div class="dates-strip">${c}</div></div>`:''})()}
+      ${(()=>{const c=dtrow('اعتماد العروض',p.date_offers_approval)+dtrow('توقيع العقد',p.date_sign)+dtrow('تسليم الموقع',p.date_site)+dtrow('انتهاء العقد',p.date_end)+dtrow('الانتهاء المعدل',p.date_end_adj)+dtrow('الاستلام الابتدائي',p.date_receive_primary)+dtrow('الاستلام الابتدائي المعدل',p.date_receive_primary_adj)+dtrow('الاستلام النهائي',p.date_receive_final)+dtrow('آخر تحديث',p.date_updated)+dtrow('بداية الإيقاف الأول',p.date_stop1_start)+dtrow('تاريخ الاستئناف الأول',p.date_stop1_end)+dtrow('بداية الإيقاف الثاني',p.date_stop2_start)+dtrow('تاريخ نهاية الاستئناف الثاني',p.date_stop2_end)+dtrow('بداية الإيقاف الثالث',p.date_stop3_start)+dtrow('تاريخ نهاية الاستئناف الثالث',p.date_stop3_end)+dtrow('الإنذار الأول',p.date_warning1)+dtrow('الإنذار الثاني',p.date_warning2)+dtrow('الإنذار الثالث',p.date_warning3)+dtrow('سحب المشروع',p.date_withdrawal);return c?`<div class="dp-section"><div class="dp-section-title">التواريخ</div><div class="dates-strip">${c}</div></div>`:''})()}
 
-      ${(()=>{const c=row('مدير المشروع',p.pm)+row('جوال مدير المشروع',p.pm_phone)+row('ايميل مدير المشروع',p.pm_email)+row('جهة الاشراف',p.supervisor)+row('الاستشاري',p.consultant)+row('جوال الاستشاري',p.consultant_phone)+row('الوكالة / الإدارة',p.agency_name)+row('الإدارة الفرعية',p.dept_name)+row('المسؤول الإداري',p.dept_manager)+row('وظيفة المسؤول',p.dept_manager_title)+row('جوال المسؤول',p.dept_manager_phone);return c?`<div class="dp-section"><img class="dp-section-orn" src="${ORNS['takatuf']}" alt=""><div class="dp-section-title">فريق المشروع</div><div class="dp-grid">${c}</div></div>`:''})()}
+      ${(()=>{const c=row('مدير المشروع',p.pm)+row('جوال مدير المشروع',p.pm_phone)+row('ايميل مدير المشروع',p.pm_email)+row('جهة الاشراف',p.supervisor)+row('الاستشاري',p.consultant)+row('جوال الاستشاري',p.consultant_phone)+row('الوكالة / الإدارة',p.agency_name)+row('الإدارة الفرعية',p.dept_name)+row('المسؤول الإداري',p.dept_manager)+row('وظيفة المسؤول',p.dept_manager_title)+row('جوال المسؤول',p.dept_manager_phone);return c?`<div class="dp-section"><div class="dp-section-title">فريق المشروع</div><div class="dp-grid">${c}</div></div>`:''})()}
 
       ${p.contractor?`
       <div class="dp-section">
-        <img class="dp-section-orn" src="${ORNS['sanbala']}" alt="">
+        
         <div class="dp-section-title">بيانات المقاول</div>
         <div class="dp-grid">
           ${row('اسم المقاول',p.contractor)}
