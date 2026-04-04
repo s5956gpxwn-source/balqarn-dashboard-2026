@@ -756,7 +756,7 @@ function openDetail(id){
       </div>
       <div class="dp-head-actions">
         ${currentUser&&currentUser.role==='admin'?`<button class="dp-edit-btn" onclick="editProject(${p.id})">&#9998; تعديل</button><button class="dp-del-btn" onclick="deleteProject(${p.id})">&#128465; حذف</button>`:''}
-        <button class="dp-edit-btn" style="background:var(--glass);color:var(--text2);border-color:var(--gborder2);" onclick="printDetail()" title="حفظ كـ PDF أو طباعة">&#9113; PDF / طباعة</button>
+        <button class="dp-edit-btn" style="background:var(--glass);color:var(--text2);border-color:var(--gborder2);" onclick="printDetail()" title="طباعة التقرير أو حفظه كملف PDF من نافذة الطباعة">&#9113; طباعة</button>
         <button class="btn-close" onclick="closeDetail()">&#x2715;</button>
       </div>
     </div>
