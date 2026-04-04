@@ -1,0 +1,23 @@
+{
+  "name": "لوحة مشاريع بلدية بلقرن",
+  "short_name": "مشاريع بلقرن",
+  "description": "لوحة متابعة مشاريع بلدية بلقرن",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F2E7DE",
+  "theme_color": "#392015",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "BB2.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "BB2.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

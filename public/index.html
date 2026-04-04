@@ -6,6 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.sheetjs.com https://www.gstatic.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com;">
 <link rel="icon" type="image/png" href="BB2.png">
 <link rel="apple-touch-icon" href="BB2.png">
+<link rel="manifest" href="manifest.json">
 <title>لوحة مشاريع بلدية بلقرن</title>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js">
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js">
@@ -679,7 +680,7 @@ function renderGrid(){
             ${p.contractor?`<div class="mrow"><span class="mkey">المقاول</span><span class="mval">${escapeHtml(p.contractor)}</span></div>`:''}
             <div class="mrow"><span class="mkey">القيمة التعاقدية</span><span class="mval big">${fmt(p.value_num)}</span></div>
             <div class="mrow"><span class="mkey">التصنيف</span><span class="mval">${escapeHtml(p.category)}</span></div>
-            ${p.date_end&&p.date_end!='2026-04-01'?`<div class="mrow"><span class="mkey">انتهاء العقد</span><span class="mval">${p.date_end}</span></div>`:''}
+            ${p.date_end?`<div class="mrow"><span class="mkey">انتهاء العقد</span><span class="mval">${p.date_end}</span></div>`:''}
           </div>
           <div class="prog-hdr">
             <span class="prog-lbl">نسبة الانجاز</span>
@@ -725,7 +726,7 @@ function openDetail(id){
   _rowOrnIdx=0;
   const p=projects.find(x=>x.id===id);if(!p)return;
   const C=COLORS[p.status];
-  const dtrow=(l,v)=>{if(!v||v=='2026-04-01'||isFieldHidden(l))return '';const ht=(currentUser&&currentUser.role==='admin'&&hiddenFields.includes(l))?'<span style="font-size:7px;color:var(--stalled)">🔒</span> ':'';return `<div class="date-item"><div class="date-lbl">${ht}${l}</div><div class="date-val">${v}</div></div>`;};
+  const dtrow=(l,v)=>{if(!v||isFieldHidden(l))return '';const ht=(currentUser&&currentUser.role==='admin'&&hiddenFields.includes(l))?'<span style="font-size:7px;color:var(--stalled)">🔒</span> ':'';return `<div class="date-item"><div class="date-lbl">${ht}${l}</div><div class="date-val">${v}</div></div>`;};
 
   const orn=CARD_ORNS[p.id%CARD_ORNS.length];
   document.getElementById('detailPanel').innerHTML=`
@@ -987,7 +988,7 @@ async function saveProject(id){
   const valNum=parseFloat(v('value_num'))||0;
   if(valNum<0){alert('القيمة التعاقدية لا يمكن أن تكون سالبة');return;}
   p.name=nameVal;
-  p.status=v('status');
+  p.status=v('status');p.status_raw=LABELS[p.status]||p.status_raw;
   p.status_raw=LABELS[p.status]||p.status;
   p.phase=v('phase');
   p.sub_phase=v('sub_phase');
