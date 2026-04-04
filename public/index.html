@@ -96,6 +96,7 @@ body.dark .orn-bar img{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 .search-input:focus{border-color:var(--advanced);width:200px;}
 .search-input:focus+.search-icon{color:var(--advanced);}
 .search-input::placeholder{color:var(--text4);}
+.search-clear{position:absolute;left:8px;background:none;border:none;color:var(--text4);font-size:14px;cursor:pointer;padding:2px 4px;display:none;font-family:inherit;transition:color .2s;}.search-clear:hover{color:var(--stalled);}
 .fbtn{background:var(--glass);border:1px solid var(--gborder);backdrop-filter:blur(8px);color:var(--text3);font-size:11px;padding:6px 14px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;transition:all .2s;}
 .fbtn:hover{border-color:var(--gborder2);color:var(--text);}
 .fbtn.active{background:var(--advanced);border-color:var(--advanced);color:white;box-shadow:0 4px 12px rgba(0,123,105,.3);}
@@ -315,6 +316,7 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
       <div class="search-wrap">
         <input class="search-input" type="text" id="searchInput" placeholder="بحث عن مشروع..." oninput="handleSearch(this.value)">
         <span class="search-icon">&#128269;</span>
+        <button class="search-clear" id="searchClear" onclick="clearSearch()">&#x2715;</button>
       </div>
       <button class="fbtn active" onclick="setFilter('all',this)">الكل</button>
       <button class="fbtn" onclick="setFilter('advanced',this)">متقدم</button>
@@ -324,6 +326,11 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
       <button class="fbtn" onclick="setFilter('late',this)">متأخر</button>
       <button class="fbtn" onclick="setFilter('stalled',this)">متعثر</button>
       <button class="fbtn" onclick="setFilter('preceipt',this)">تم الاستلام ابتدائيا</button>
+      <span style="width:1px;height:20px;background:var(--gborder);margin:0 4px;flex-shrink:0;"></span>
+      <button class="fbtn sort-btn" id="sort_id" onclick="setSort('id',this)">الافتراضي</button>
+      <button class="fbtn sort-btn" onclick="setSort('value_num',this)">القيمة</button>
+      <button class="fbtn sort-btn" onclick="setSort('progress',this)">الإنجاز</button>
+      <button class="fbtn sort-btn" onclick="setSort('date_end',this)">التاريخ</button>
     </div>
   </div>
   <div class="proj-grid" id="projGrid"></div>
@@ -376,6 +383,8 @@ const COLORS={advanced:'#007B69',regular:'#66B0A5',pending:'#A37956',stopped:'#E
 let projects=[];
 let filter='all';
 let searchQuery='';
+let sortBy='id';
+let sortDir=1;
 
 function escapeHtml(t){if(t==null)return '';return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
@@ -659,12 +668,17 @@ function renderBudget(){
   `;
 }
 
-function handleSearch(q){searchQuery=q.trim();renderGrid();}
+function handleSearch(q){searchQuery=q.trim();document.getElementById('searchClear').style.display=searchQuery?'block':'none';renderGrid();}
+function clearSearch(){document.getElementById('searchInput').value='';handleSearch('');}
+function setSort(field,btn){if(sortBy===field){sortDir*=-1;}else{sortBy=field;sortDir=field==='id'?1:-1;}document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');btn.textContent=btn.textContent.replace(/ [▲▼]/,'')+(field==='id'?'':sortDir>0?' ▲':' ▼');renderAll();}
 window.handleSearch=handleSearch;
+window.clearSearch=clearSearch;
+window.setSort=setSort;
 
 function renderGrid(){
   let filtered=filter==='all'?projects:projects.filter(p=>p.status===filter);
   if(searchQuery){const q=searchQuery.toLowerCase();filtered=filtered.filter(p=>(p.name||'').toLowerCase().includes(q)||(p.contractor||'').toLowerCase().includes(q)||(p.category||'').toLowerCase().includes(q)||(p.pm||'').toLowerCase().includes(q)||(p.contract_no||'').toLowerCase().includes(q));}
+  if(sortBy!=='id'){filtered.sort((a,b)=>{let av=a[sortBy],bv=b[sortBy];if(sortBy==='date_end'){av=av||'';bv=bv||'';return sortDir*(av<bv?-1:av>bv?1:0);}return sortDir*((av||0)-(bv||0));});}
   document.getElementById('projCount').textContent=filtered.length;
   document.getElementById('projGrid').innerHTML=filtered.length
     ?filtered.map((p,i)=>{
@@ -742,6 +756,7 @@ function openDetail(id){
       </div>
       <div class="dp-head-actions">
         ${currentUser&&currentUser.role==='admin'?`<button class="dp-edit-btn" onclick="editProject(${p.id})">&#9998; تعديل</button><button class="dp-del-btn" onclick="deleteProject(${p.id})">&#128465; حذف</button>`:''}
+        <button class="btn-close" onclick="printDetail()" title="طباعة">&#128424;</button>
         <button class="btn-close" onclick="closeDetail()">&#x2715;</button>
       </div>
     </div>
@@ -825,6 +840,8 @@ function openDetail(id){
 }
 
 function closeDetail(){document.getElementById('detailOverlay').classList.remove('open');document.body.style.overflow='';}
+function printDetail(){const panel=document.getElementById('detailPanel');const w=window.open('','_blank');w.document.write('<html dir="rtl"><head><meta charset="UTF-8"><title>طباعة تفاصيل المشروع</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700;800&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:20px;color:#392015;font-size:12px;}.dp-head-actions,.btn-close,.dp-edit-btn,.dp-del-btn,.dp-head-orn,.dp-section-orn,.dp-item-orn{display:none!important;}.dp-head{border-bottom:2px solid #ccc;padding-bottom:12px;margin-bottom:12px;}.dp-name{font-size:18px;font-weight:900;}.dp-body{display:flex;flex-direction:column;gap:12px;}.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}.dp-item{border:1px solid #ddd;border-radius:8px;padding:8px;}.dp-item.full{grid-column:1/-1;}.di-lbl{font-size:9px;color:#888;margin-bottom:2px;}.di-val{font-size:12px;font-weight:700;}.dp-section-title{font-size:11px;font-weight:800;color:#888;border-bottom:1px solid #ddd;padding-bottom:4px;margin-bottom:8px;}.dp-prog{border:1px solid #ddd;border-radius:10px;padding:12px;}.dp-track,.dp-fill,.prog-track,.prog-fill{height:8px;border-radius:4px;}.dates-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}.date-item{border:1px solid #ddd;border-radius:6px;padding:6px;text-align:center;}.date-lbl{font-size:8px;color:#888;}.date-val{font-size:10px;font-weight:700;}.sbadge{font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid #ccc;}.dp-action,.dp-brief-box,.dp-notes-box{border:1px solid #ddd;border-radius:8px;padding:10px;margin-bottom:4px;}.dp-letters{border:1px solid #ddd;border-radius:8px;padding:10px;}@media print{body{padding:10px;}}</style></head><body>'+panel.innerHTML+'</body></html>');w.document.close();setTimeout(()=>{w.print();w.close();},500);}
+window.printDetail=printDetail;
 document.getElementById('detailOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDetail();});
 
 function editField(label,field,val,type){
