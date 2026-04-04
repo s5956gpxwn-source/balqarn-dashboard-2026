@@ -7,3 +7,8 @@ node_modules/
 .firebase/
 firebase-debug.log
 .firebaserc
+
+# ملفات تحتوي بيانات اعتماد - لا ترفع للمستودع
+setup-firebase.js
+upload-projects-console.js
+setup-data.html
