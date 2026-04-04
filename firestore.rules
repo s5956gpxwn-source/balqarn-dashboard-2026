@@ -5,7 +5,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow update: if request.auth != null && request.auth.uid == userId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['theme']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['theme','printSettings']);
       allow create, delete: if false;
     }
     // المشاريع - قراءة لأي مستخدم مسجل، كتابة للأدمن فقط

@@ -100,6 +100,7 @@ body.dark .orn-bar img{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 .fbtn{background:var(--glass);border:1px solid var(--gborder);backdrop-filter:blur(8px);color:var(--text3);font-size:11px;padding:6px 14px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;transition:all .2s;}
 .fbtn:hover{border-color:var(--gborder2);color:var(--text);}
 .fbtn.active{background:var(--advanced);border-color:var(--advanced);color:white;box-shadow:0 4px 12px rgba(0,123,105,.3);}
+.sort-btn.active{background:var(--pending);border-color:var(--pending);color:white;box-shadow:0 4px 12px rgba(163,121,86,.3);}
 .proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;}
 .proj-card{border-radius:16px;padding:18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;animation:fadeIn .4s ease both;background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--gborder);}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
@@ -327,12 +328,14 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
       <button class="fbtn" onclick="setFilter('late',this)">متأخر</button>
       <button class="fbtn" onclick="setFilter('stalled',this)">متعثر</button>
       <button class="fbtn" onclick="setFilter('preceipt',this)">تم الاستلام ابتدائيا</button>
-      <span style="width:1px;height:20px;background:var(--gborder);margin:0 4px;flex-shrink:0;"></span>
-      <button class="fbtn sort-btn" id="sort_id" onclick="setSort('id',this)">الافتراضي</button>
-      <button class="fbtn sort-btn" onclick="setSort('value_num',this)">القيمة</button>
-      <button class="fbtn sort-btn" onclick="setSort('progress',this)">الإنجاز</button>
-      <button class="fbtn sort-btn" onclick="setSort('date_end',this)">التاريخ</button>
     </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+    <span style="font-size:11px;font-weight:800;color:var(--text3);white-space:nowrap;">فرز حسب:</span>
+    <button class="fbtn sort-btn" id="sort_id" onclick="setSort('id',this)">الافتراضي</button>
+    <button class="fbtn sort-btn" onclick="setSort('value_num',this)">القيمة</button>
+    <button class="fbtn sort-btn" onclick="setSort('progress',this)">الإنجاز</button>
+    <button class="fbtn sort-btn" onclick="setSort('date_end',this)">التاريخ</button>
   </div>
   <div class="proj-grid" id="projGrid"></div>
 </main>
@@ -479,6 +482,7 @@ onAuthStateChanged(auth,async(user)=>{
         const ud=userDoc.data();
         currentUser={username:user.email,name:ud.name,welcome:ud.welcome,role:ud.role};
         if(ud.theme)setTheme(ud.theme);
+        if(ud.printSettings){_printSettings=ud.printSettings;try{localStorage.setItem('printSettings',JSON.stringify(ud.printSettings));}catch(e){}}
       }else{
         currentUser={username:user.email,name:user.email,welcome:'مرحباً',role:'viewer'};
       }
@@ -900,41 +904,96 @@ const PRINT_COLS=[
 {key:'name',label:'اسم المشروع',get:p=>p.name||'',style:'font-weight:700;',on:true},
 {key:'status',label:'الحالة',get:p=>`<span style="color:${COLORS[p.status]||'#333'};font-weight:700;">${LABELS[p.status]||''}</span>`,style:'',on:true},
 {key:'contractor',label:'المقاول',get:p=>p.contractor||'',style:'',on:true},
-{key:'progress',label:'الإنجاز',get:p=>(Number.isInteger(p.progress)?p.progress:p.progress.toFixed(2))+'%',style:'text-align:center;font-weight:700;',on:true},
+{key:'progress',label:'نسبة الإنجاز',get:p=>(Number.isInteger(p.progress)?p.progress:p.progress.toFixed(2))+'%',style:'text-align:center;font-weight:700;',on:true},
 {key:'value_num',label:'القيمة التعاقدية',get:p=>p.value_num?p.value_num.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'',style:'text-align:left;',on:true},
 {key:'date_end',label:'انتهاء العقد',get:p=>p.date_end||'',style:'text-align:center;',on:true},
 {key:'last_action',label:'آخر إجراء',get:p=>p.last_action||'',style:'font-size:9px;',on:true},
 {key:'pm',label:'مدير المشروع',get:p=>p.pm||'',style:'',on:false},
-{key:'category',label:'التصنيف',get:p=>p.category||'',style:'',on:false},
+{key:'pm_phone',label:'جوال مدير المشروع',get:p=>p.pm_phone||'',style:'',on:false},
+{key:'pm_email',label:'إيميل مدير المشروع',get:p=>p.pm_email||'',style:'',on:false},
+{key:'category',label:'فئة الأصل الرئيسية',get:p=>p.category||'',style:'',on:false},
+{key:'category_sub',label:'فئة الأصل الفرعية',get:p=>p.category_sub||'',style:'',on:false},
 {key:'contract_no',label:'رقم العقد',get:p=>p.contract_no||'',style:'',on:false},
-{key:'duration_days',label:'المدة التعاقدية',get:p=>p.duration_days?p.duration_days+' يوم':'',style:'text-align:center;',on:false},
-{key:'elapsed_pct',label:'المدة المنقضية',get:p=>p.elapsed_pct?p.elapsed_pct+'%':'',style:'text-align:center;',on:false},
-{key:'delay_pct',label:'نسبة التأخير',get:p=>p.delay_pct?p.delay_pct+'%':'',style:'text-align:center;',on:false},
-{key:'supervisor',label:'جهة الإشراف',get:p=>p.supervisor||'',style:'',on:false},
-{key:'notes',label:'ملاحظات',get:p=>p.notes||'',style:'font-size:9px;',on:false},
+{key:'reference_no',label:'الرقم المرجعي',get:p=>p.reference_no||'',style:'',on:false},
+{key:'project_no',label:'رقم مشروعات',get:p=>p.project_no||'',style:'',on:false},
 {key:'sector',label:'القطاع',get:p=>p.sector||'',style:'',on:false},
-{key:'project_brief',label:'نبذة عن المشروع',get:p=>p.project_brief||'',style:'font-size:9px;',on:false}
+{key:'municipality',label:'البلدية',get:p=>p.municipality||'',style:'',on:false},
+{key:'phase',label:'المرحلة',get:p=>p.phase||'',style:'',on:false},
+{key:'sub_phase',label:'المرحلة الفرعية',get:p=>p.sub_phase||'',style:'',on:false},
+{key:'priority',label:'الأولوية',get:p=>p.priority||'',style:'',on:false},
+{key:'scope',label:'نطاق العمل',get:p=>p.scope||'',style:'font-size:9px;',on:false},
+{key:'description',label:'الوصف',get:p=>p.description||'',style:'font-size:9px;',on:false},
+{key:'value_adjusted',label:'قيمة العقد المعدل',get:p=>p.value_adjusted?p.value_adjusted.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'',style:'text-align:left;',on:false},
+{key:'boq_value',label:'قيمة جدول الكميات',get:p=>p.boq_value?p.boq_value.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'',style:'text-align:left;',on:false},
+{key:'duration_days',label:'المدة التعاقدية',get:p=>p.duration_days?p.duration_days+' يوم':'',style:'text-align:center;',on:false},
+{key:'duration_after_ext',label:'المدة بعد التمديد',get:p=>p.duration_after_ext?p.duration_after_ext+' يوم':'',style:'text-align:center;',on:false},
+{key:'ext1',label:'التمديد الأول',get:p=>p.ext1?p.ext1+' يوم':'',style:'text-align:center;',on:false},
+{key:'ext2',label:'التمديد الثاني',get:p=>p.ext2?p.ext2+' يوم':'',style:'text-align:center;',on:false},
+{key:'ext3',label:'التمديد الثالث',get:p=>p.ext3?p.ext3+' يوم':'',style:'text-align:center;',on:false},
+{key:'tax_pct',label:'نسبة الضريبة',get:p=>p.tax_pct?p.tax_pct+'%':'',style:'text-align:center;',on:false},
+{key:'increase_pct',label:'نسبة الزيادة',get:p=>p.increase_pct?p.increase_pct+'%':'',style:'text-align:center;',on:false},
+{key:'discount_pct',label:'نسبة التخفيض',get:p=>p.discount_pct?p.discount_pct+'%':'',style:'text-align:center;',on:false},
+{key:'guarantee_value',label:'قيمة الضمان النهائي',get:p=>p.guarantee_value?p.guarantee_value.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'',style:'text-align:left;',on:false},
+{key:'advance_payment',label:'قيمة الدفعة المقدمة',get:p=>p.advance_payment?p.advance_payment.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'',style:'text-align:left;',on:false},
+{key:'elapsed_pct',label:'المدة المنقضية',get:p=>p.elapsed_pct?p.elapsed_pct+'%':'',style:'text-align:center;',on:false},
+{key:'elapsed_ext_pct',label:'المدة المنقضية بعد التمديد',get:p=>p.elapsed_ext_pct?p.elapsed_ext_pct+'%':'',style:'text-align:center;',on:false},
+{key:'delay_pct',label:'نسبة التأخير',get:p=>p.delay_pct?p.delay_pct+'%':'',style:'text-align:center;',on:false},
+{key:'stops',label:'مجموع الإيقافات',get:p=>p.stops||'',style:'text-align:center;',on:false},
+{key:'warnings_count',label:'عدد الإنذارات',get:p=>p.warnings_count||'',style:'text-align:center;',on:false},
+{key:'correction_days',label:'أيام التصحيح',get:p=>p.correction_days||'',style:'text-align:center;',on:false},
+{key:'is_stopped',label:'المشروع موقوف',get:p=>p.is_stopped||'',style:'',on:false},
+{key:'is_received_primary',label:'تم الاستلام ابتدائيا',get:p=>p.is_received_primary||'',style:'',on:false},
+{key:'supervisor',label:'جهة الإشراف',get:p=>p.supervisor||'',style:'',on:false},
+{key:'consultant',label:'الاستشاري',get:p=>p.consultant||'',style:'',on:false},
+{key:'contractor_engineer',label:'مهندس المقاول',get:p=>p.contractor_engineer||'',style:'',on:false},
+{key:'contractor_rank',label:'تصنيف المقاول',get:p=>p.contractor_rank||'',style:'',on:false},
+{key:'contractor_phone',label:'جوال المقاول',get:p=>p.contractor_phone||'',style:'',on:false},
+{key:'contractor_email',label:'إيميل المقاول',get:p=>p.contractor_email||'',style:'',on:false},
+{key:'budget_door',label:'باب الميزانية',get:p=>p.budget_door||'',style:'',on:false},
+{key:'budget_code',label:'رقم بند الميزانية',get:p=>p.budget_code||'',style:'',on:false},
+{key:'budget_desc',label:'وصف بند الميزانية',get:p=>p.budget_desc||'',style:'',on:false},
+{key:'date_sign',label:'تاريخ التوقيع',get:p=>p.date_sign||'',style:'text-align:center;',on:false},
+{key:'date_site',label:'تسليم الموقع',get:p=>p.date_site||'',style:'text-align:center;',on:false},
+{key:'date_end_adj',label:'الانتهاء المعدل',get:p=>p.date_end_adj||'',style:'text-align:center;',on:false},
+{key:'date_receive_primary',label:'الاستلام الابتدائي',get:p=>p.date_receive_primary||'',style:'text-align:center;',on:false},
+{key:'date_receive_final',label:'الاستلام النهائي',get:p=>p.date_receive_final||'',style:'text-align:center;',on:false},
+{key:'date_updated',label:'آخر تحديث',get:p=>p.date_updated||'',style:'text-align:center;',on:false},
+{key:'vision_linked',label:'مرتبط بالرؤية',get:p=>p.vision_linked||'',style:'',on:false},
+{key:'initiative',label:'المبادرة',get:p=>p.initiative||'',style:'',on:false},
+{key:'status_mashroat',label:'الحالة في مشروعات',get:p=>p.status_mashroat||'',style:'',on:false},
+{key:'notes',label:'ملاحظات',get:p=>p.notes||'',style:'font-size:9px;',on:false},
+{key:'project_brief',label:'نبذة عن المشروع',get:p=>p.project_brief||'',style:'font-size:9px;',on:false},
+{key:'letters',label:'الخطابات',get:p=>p.letters||'',style:'font-size:9px;',on:false}
 ];
-function getPrintSettings(){try{const s=JSON.parse(localStorage.getItem('printCols'));if(s&&typeof s==='object')return s;}catch(e){}return{};}
-function savePrintSettings(settings){try{localStorage.setItem('printCols',JSON.stringify(settings));}catch(e){}}
+let _printSettings=null;
+function getPrintSettings(){if(_printSettings)return _printSettings;try{const s=JSON.parse(localStorage.getItem('printSettings'));if(s&&s.cols){_printSettings=s;return s;}}catch(e){}return{cols:{},order:[]};}
+async function savePrintSettings(settings){_printSettings=settings;try{localStorage.setItem('printSettings',JSON.stringify(settings));}catch(e){}if(auth.currentUser){try{await setDoc(doc(db,'users',auth.currentUser.uid),{printSettings:settings},{merge:true});}catch(e){}}}
 
+function getOrderedCols(){
+  const s=getPrintSettings();const order=s.order||[];
+  const all=PRINT_COLS.map(c=>({...c,on:s.cols.hasOwnProperty(c.key)?s.cols[c.key]:c.on}));
+  if(order.length){const map={};all.forEach(c=>{map[c.key]=c;});const ordered=[];order.forEach(k=>{if(map[k]){ordered.push(map[k]);delete map[k];}});Object.values(map).forEach(c=>ordered.push(c));return ordered;}
+  return all;
+}
 function openPrintSettings(){
-  const saved=getPrintSettings();
-  const cols=PRINT_COLS.map(c=>({...c,on:saved.hasOwnProperty(c.key)?saved[c.key]:c.on}));
+  const cols=getOrderedCols();
   const panel=document.getElementById('detailPanel');
+  const scrollPos=panel.scrollTop;
   panel.innerHTML=`
     <div class="dp-head">
-      <div><div class="dp-name">إعدادات طباعة التقرير الشامل</div><div style="margin-top:4px;font-size:11px;color:var(--text3)">اختر الأعمدة التي تظهر في التقرير — تُحفظ تلقائياً</div></div>
+      <div><div class="dp-name">إعدادات طباعة التقرير الشامل</div><div style="margin-top:4px;font-size:11px;color:var(--text3)">اختر الأعمدة وحدد ترتيبها — تُحفظ تلقائياً</div></div>
       <div class="dp-head-actions"><button class="btn-close" onclick="closeDetail()">&#x2715;</button></div>
     </div>
     <div class="dp-body">
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        ${cols.map(c=>`
-          <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--glass);border:1px solid var(--gborder);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text);">
-            <input type="checkbox" ${c.on?'checked':''} onchange="togglePrintCol('${c.key}',this.checked)" style="width:16px;height:16px;accent-color:var(--advanced);">
-            <span style="flex:1">${c.label}</span>
-            <span style="font-size:10px;color:${c.on?'var(--advanced)':'var(--text4)'};">${c.on?'يظهر':'مخفي'}</span>
-          </label>
+      <div style="display:flex;flex-direction:column;gap:4px;" id="printColsList">
+        ${cols.map((c,i)=>`
+          <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--glass);border:1px solid var(--gborder);border-radius:8px;font-size:12px;font-weight:600;color:var(--text);">
+            <input type="checkbox" ${c.on?'checked':''} onchange="togglePrintCol('${c.key}',this.checked)" style="width:15px;height:15px;accent-color:var(--advanced);cursor:pointer;">
+            <span style="flex:1;cursor:pointer;" onclick="this.previousElementSibling.click()">${c.label}</span>
+            <button onclick="movePrintCol('${c.key}',-1)" style="background:none;border:1px solid var(--gborder);border-radius:4px;cursor:pointer;padding:1px 6px;font-size:11px;color:var(--text3);">▲</button>
+            <button onclick="movePrintCol('${c.key}',1)" style="background:none;border:1px solid var(--gborder);border-radius:4px;cursor:pointer;padding:1px 6px;font-size:11px;color:var(--text3);">▼</button>
+            <span style="font-size:9px;color:${c.on?'var(--advanced)':'var(--text4)'};">${c.on?'✓':''}</span>
+          </div>
         `).join('')}
       </div>
       <div class="dp-form-actions">
@@ -943,20 +1002,31 @@ function openPrintSettings(){
       </div>
     </div>`;
   document.getElementById('detailOverlay').classList.add('open');
-  panel.scrollTop=0;
+  panel.scrollTop=scrollPos;
 }
 function togglePrintCol(key,on){
-  const saved=getPrintSettings();
-  saved[key]=on;
-  savePrintSettings(saved);
-  openPrintSettings();
+  const s=getPrintSettings();s.cols[key]=on;
+  if(!s.order.length)s.order=PRINT_COLS.map(c=>c.key);
+  savePrintSettings(s);
+  const panel=document.getElementById('detailPanel');const sp=panel.scrollTop;
+  openPrintSettings();panel.scrollTop=sp;
+}
+function movePrintCol(key,dir){
+  const s=getPrintSettings();
+  if(!s.order.length)s.order=getOrderedCols().map(c=>c.key);
+  const i=s.order.indexOf(key);if(i<0)return;
+  const ni=i+dir;if(ni<0||ni>=s.order.length)return;
+  [s.order[i],s.order[ni]]=[s.order[ni],s.order[i]];
+  savePrintSettings(s);
+  const panel=document.getElementById('detailPanel');const sp=panel.scrollTop;
+  openPrintSettings();panel.scrollTop=sp;
 }
 window.openPrintSettings=openPrintSettings;
 window.togglePrintCol=togglePrintCol;
+window.movePrintCol=movePrintCol;
 
 function printDashboard(){
-const saved=getPrintSettings();
-const activeCols=PRINT_COLS.filter(c=>saved.hasOwnProperty(c.key)?saved[c.key]:c.on);
+const activeCols=getOrderedCols().filter(c=>c.on);
 const logoSrc=document.querySelector('.logo-img')?.src||'BB.png';
 const sigSrc=document.querySelector('.sig-img')?.src||'assets/ornaments/developer_sig.png';
 const now=new Date();const dateStr=now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+(now.getHours()%12||12)+':'+(now.getMinutes()<10?'0':'')+now.getMinutes()+' '+(now.getHours()>=12?'م':'ص');
