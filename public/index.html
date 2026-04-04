@@ -846,9 +846,11 @@ const projName=panel.querySelector('.dp-name')?.textContent||'مشروع';
 const logoSrc=document.querySelector('.logo-img')?.src||'BB.png';
 const css=`*{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-size:11px;line-height:1.5;direction:rtl;background:#fff;}
-.print-header{display:flex;align-items:center;gap:12px;padding:20px 30px;border-bottom:3px solid #392015;}
+.print-header{display:flex;align-items:center;justify-content:space-between;padding:20px 30px;border-bottom:3px solid #392015;margin-bottom:0;}
 .print-header img{height:60px;}
-.print-header-title{font-size:14px;font-weight:800;color:#392015;flex:1;}
+.print-header-text{text-align:left;font-size:10px;color:#614C44;}
+.print-header-title{font-size:14px;font-weight:800;color:#392015;text-align:center;flex:1;}
+.print-date{font-size:9px;color:#887973;text-align:center;padding:6px 30px;border-bottom:1px solid #E5CFBD;margin-bottom:16px;}
 .dp-head-actions,.btn-close,.dp-edit-btn,.dp-del-btn,.dp-head-orn,.dp-section-orn,.dp-item-orn{display:none!important;}
 .dp-head{padding:16px 30px 12px;background:#F9F3EE!important;backdrop-filter:none!important;border-bottom:2px solid #E5CFBD;position:relative;}
 .dp-name{font-size:17px;font-weight:900;color:#392015;}
@@ -886,7 +888,8 @@ body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-
 .print-footer span{font-size:11px;color:#614C44;font-weight:700;}
 @page{size:A4;margin:0;}
 @media print{body{padding:12mm 10mm;}}`;
-const header='<div class="print-header"><img src="'+logoSrc+'" alt=""><div class="print-header-title">تقرير مشروع - '+projName.replace(/</g,'&lt;')+'</div></div>';
+const now=new Date();const dateStr=now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+(now.getHours()%12||12)+':'+(now.getMinutes()<10?'0':'')+now.getMinutes()+' '+(now.getHours()>=12?'م':'ص');
+const header='<div class="print-header"><img src="'+logoSrc+'" alt=""><div class="print-header-title">تقرير مشروع - '+projName.replace(/</g,'&lt;')+'</div><div class="print-header-text">تقرير مشروع</div></div><div class="print-date">تاريخ الطباعة: '+dateStr+'</div>';
 const sigSrc=document.querySelector('.sig-img')?.src||'assets/ornaments/developer_sig.png';
 const footer='<div class="print-footer"><img src="'+sigSrc+'" alt=""><span>م. محمد مرعي القرني</span></div>';
 const w=window.open('','_blank');
