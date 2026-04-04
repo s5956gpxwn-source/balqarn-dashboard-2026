@@ -846,7 +846,6 @@ function openDetail(id){
 
 function closeDetail(){document.getElementById('detailOverlay').classList.remove('open');document.body.style.overflow='';}
 function printDetail(){
-const ps=getPrintSettings();
 const panel=document.getElementById('detailPanel');
 const projName=panel.querySelector('.dp-name')?.textContent||'مشروع';
 const logoSrc=document.querySelector('.logo-img')?.src||'BB.png';
@@ -890,7 +889,7 @@ body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-
 .dp-notes-box{border:1px solid #C89A6F;border-radius:8px;padding:10px;background:#FFFBF5;}
 .dp-letters{border:1px solid #E5CFBD;border-radius:8px;padding:10px;background:#FDFAF7;font-size:10px;line-height:1.8;}
 .print-header-sig{text-align:left;}.print-header-sig img{height:30px;opacity:.5;}
-@page{size:${ps.pageSize} ${ps.pageDir};margin:10mm 12mm;}
+@page{size:A4;margin:10mm 12mm;}
 @media print{body{padding:0;}}`;
 const sigSrc=document.querySelector('.sig-img')?.src||'assets/ornaments/developer_sig.png';
 const now=new Date();const dateStr=now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+(now.getHours()%12||12)+':'+(now.getMinutes()<10?'0':'')+now.getMinutes()+' '+(now.getHours()>=12?'م':'ص');
@@ -967,7 +966,7 @@ const PRINT_COLS=[
 {key:'letters',label:'الخطابات',get:p=>p.letters||'',style:'font-size:9px;',on:false}
 ];
 let _printSettings=null;
-function getPrintSettings(){if(_printSettings)return _printSettings;try{const s=JSON.parse(localStorage.getItem('printSettings'));if(s&&s.cols){if(!s.pageSize)s.pageSize='A4';if(!s.pageDir)s.pageDir='landscape';_printSettings=s;return s;}}catch(e){}return{cols:{},order:[],pageSize:'A4',pageDir:'landscape'};}
+function getPrintSettings(){if(_printSettings)return _printSettings;try{const s=JSON.parse(localStorage.getItem('printSettings'));if(s&&s.cols){_printSettings=s;return s;}}catch(e){}return{cols:{},order:[]};}
 async function savePrintSettings(settings){_printSettings=settings;try{localStorage.setItem('printSettings',JSON.stringify(settings));}catch(e){}if(auth.currentUser){try{await setDoc(doc(db,'users',auth.currentUser.uid),{printSettings:settings},{merge:true});}catch(e){}}}
 
 function getOrderedCols(){
@@ -983,23 +982,12 @@ function openPrintSettings(){
   const panel=document.getElementById('detailPanel');
   const scrollPos=panel.scrollTop;
   const allSelected=filtered.every(p=>!_excludedProjects[p.id]);
-  const ps=getPrintSettings();
   panel.innerHTML=`
     <div class="dp-head">
       <div><div class="dp-name">إعدادات طباعة التقرير الشامل</div><div style="margin-top:4px;font-size:11px;color:var(--text3)">اختر الأعمدة والمشاريع — الإعدادات تُحفظ تلقائياً</div></div>
       <div class="dp-head-actions"><button class="btn-close" onclick="closeDetail()">&#x2715;</button></div>
     </div>
     <div class="dp-body">
-      <div class="dp-section-title">إعدادات الصفحة</div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--text3);">حجم الورق:</div>
-        <button class="fbtn ${ps.pageSize==='A4'?'active':''}" onclick="setPrintPage('pageSize','A4')" style="${ps.pageSize==='A4'?'background:var(--pending);border-color:var(--pending);color:white;':''}">A4</button>
-        <button class="fbtn ${ps.pageSize==='A3'?'active':''}" onclick="setPrintPage('pageSize','A3')" style="${ps.pageSize==='A3'?'background:var(--pending);border-color:var(--pending);color:white;':''}">A3</button>
-        <span style="width:1px;height:20px;background:var(--gborder);"></span>
-        <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--text3);">الاتجاه:</div>
-        <button class="fbtn ${ps.pageDir==='landscape'?'active':''}" onclick="setPrintPage('pageDir','landscape')" style="${ps.pageDir==='landscape'?'background:var(--pending);border-color:var(--pending);color:white;':''}">أفقي</button>
-        <button class="fbtn ${ps.pageDir==='portrait'?'active':''}" onclick="setPrintPage('pageDir','portrait')" style="${ps.pageDir==='portrait'?'background:var(--pending);border-color:var(--pending);color:white;':''}">رأسي</button>
-      </div>
       <div class="dp-section-title">الأعمدة</div>
       <div style="display:flex;flex-direction:column;gap:4px;">
         ${cols.map(c=>`
@@ -1056,8 +1044,6 @@ function movePrintCol(key,dir){
 }
 function togglePrintProject(id,on){if(on){delete _excludedProjects[id];}else{_excludedProjects[id]=true;}const panel=document.getElementById('detailPanel');const sp=panel.scrollTop;openPrintSettings();panel.scrollTop=sp;}
 function toggleAllProjects(on){const filtered=filter==='all'?projects:projects.filter(p=>p.status===filter);if(on){filtered.forEach(p=>{delete _excludedProjects[p.id];});}else{filtered.forEach(p=>{_excludedProjects[p.id]=true;});}const panel=document.getElementById('detailPanel');const sp=panel.scrollTop;openPrintSettings();panel.scrollTop=sp;}
-function setPrintPage(key,val){const s=getPrintSettings();s[key]=val;savePrintSettings(s);const panel=document.getElementById('detailPanel');const sp=panel.scrollTop;openPrintSettings();panel.scrollTop=sp;}
-window.setPrintPage=setPrintPage;
 window.openPrintSettings=openPrintSettings;
 window.togglePrintCol=togglePrintCol;
 window.movePrintCol=movePrintCol;
@@ -1065,7 +1051,6 @@ window.togglePrintProject=togglePrintProject;
 window.toggleAllProjects=toggleAllProjects;
 
 function printDashboard(){
-const ps=getPrintSettings();
 const activeCols=getOrderedCols().filter(c=>c.on);
 const logoSrc=document.querySelector('.logo-img')?.src||'BB.png';
 const sigSrc=document.querySelector('.sig-img')?.src||'assets/ornaments/developer_sig.png';
@@ -1101,7 +1086,7 @@ td{padding:5px 8px;border-bottom:1px solid #E5CFBD;vertical-align:top;}
 tr:nth-child(even){background:#FDFAF7;}
 tr{break-inside:avoid;}
 .print-header-sig{text-align:left;}.print-header-sig img{height:30px;opacity:.5;}
-@page{size:${ps.pageSize} ${ps.pageDir};margin:10mm 12mm;}
+@page{size:A4 landscape;margin:10mm 12mm;}
 @media print{body{padding:0;}}`;
 const html=`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
 <title>تقرير مشاريع بلدية بلقرن</title>
