@@ -842,30 +842,24 @@ function openDetail(id){
 function closeDetail(){document.getElementById('detailOverlay').classList.remove('open');document.body.style.overflow='';}
 function printDetail(){
 const panel=document.getElementById('detailPanel');
-const logoSrc=document.querySelector('.logo-img')?.src||'BB.png';
+const projName=panel.querySelector('.dp-name')?.textContent||'مشروع';
 const css=`*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-size:11px;line-height:1.5;direction:rtl;background:#fff;}
-.print-header{display:flex;align-items:center;justify-content:space-between;padding:20px 30px;border-bottom:3px solid #392015;margin-bottom:0;}
-.print-header img{height:60px;}
-.print-header-text{text-align:left;font-size:10px;color:#614C44;}
-.print-header-title{font-size:14px;font-weight:800;color:#392015;text-align:center;flex:1;}
-.print-date{font-size:9px;color:#887973;text-align:center;padding:6px 30px;border-bottom:1px solid #E5CFBD;margin-bottom:16px;}
+body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:20px 30px;color:#392015;font-size:11px;line-height:1.5;direction:rtl;background:#fff;}
 .dp-head-actions,.btn-close,.dp-edit-btn,.dp-del-btn,.dp-head-orn,.dp-section-orn,.dp-item-orn{display:none!important;}
-.dp-head{padding:16px 30px 12px;background:#F9F3EE!important;backdrop-filter:none!important;border-bottom:2px solid #E5CFBD;position:relative;}
+.dp-head{padding:16px 0 12px;background:none!important;backdrop-filter:none!important;border-bottom:2px solid #E5CFBD;position:relative;}
 .dp-name{font-size:17px;font-weight:900;color:#392015;}
 .sbadge{font-size:9px;padding:3px 10px;border-radius:10px;border:1px solid #C4BCB9;display:inline-block;background:#fff;}
-.dp-body{padding:16px 30px 20px;display:flex;flex-direction:column;gap:14px;}
-.dp-section{margin-bottom:2px;break-inside:avoid;page-break-inside:avoid;}
-.dp-head{break-inside:avoid;page-break-inside:avoid;}
-.dp-brief-box,.dp-notes-box{break-inside:avoid;page-break-inside:avoid;}
+.dp-body{padding:16px 0 20px;display:flex;flex-direction:column;gap:14px;}
+.dp-section{margin-bottom:2px;}
 .dp-section-title{font-size:11px;font-weight:800;color:#614C44;border-bottom:2px solid #E5CFBD;padding-bottom:5px;margin-bottom:8px;letter-spacing:.5px;page-break-after:avoid;break-after:avoid;}
+.dp-section-title::after{content:'';display:block;height:60px;margin-bottom:-60px;}
 .dp-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
-.dp-item{border:1px solid #E5CFBD;border-radius:6px;padding:8px 10px;background:#FDFAF7;page-break-inside:avoid;}
+.dp-item{border:1px solid #E5CFBD;border-radius:6px;padding:8px 10px;background:#FDFAF7;break-inside:avoid;}
 .dp-item.full{grid-column:1/-1;}
 .di-lbl{font-size:8px;color:#887973;margin-bottom:2px;font-weight:700;}
 .di-val{font-size:11px;font-weight:700;color:#392015;}
 .di-val.small{font-size:10px;}
-.dp-prog{border:1px solid #E5CFBD;border-radius:10px;padding:14px;background:#FDFAF7;page-break-inside:avoid;break-inside:avoid;}
+.dp-prog{border:1px solid #E5CFBD;border-radius:10px;padding:14px;background:#FDFAF7;break-inside:avoid;}
 .dp-prog-hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
 .dp-prog-pct{font-size:28px;font-weight:900;}
 .dp-track{height:8px;background:#E5CFBD;border-radius:4px;overflow:hidden;}
@@ -875,25 +869,23 @@ body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-
 .date-item{border:1px solid #E5CFBD;border-radius:6px;padding:6px;text-align:center;background:#FDFAF7;}
 .date-lbl{font-size:7px;color:#887973;margin-bottom:2px;font-weight:700;}
 .date-val{font-size:10px;font-weight:700;}
-.dp-action{border:1px solid #973D4B;border-radius:8px;padding:10px;background:#FFF8F9;page-break-inside:avoid;break-inside:avoid;}
+.dp-action{border:1px solid #973D4B;border-radius:8px;padding:10px;background:#FFF8F9;break-inside:avoid;}
 .dp-action-lbl{font-size:8px;color:#973D4B;font-weight:800;margin-bottom:3px;}
 .dp-action-txt{font-size:11px;font-weight:600;}
-.dp-brief-box{border:1px solid #E5CFBD;border-radius:8px;padding:10px;background:#FDFAF7;}
+.dp-brief-box{border:1px solid #E5CFBD;border-radius:8px;padding:10px;background:#FDFAF7;break-inside:avoid;}
 .dp-brief-lbl,.dp-notes-lbl{font-size:8px;font-weight:800;margin-bottom:3px;color:#614C44;}
 .dp-brief-txt,.dp-notes-txt{font-size:11px;font-weight:600;}
-.dp-notes-box{border:1px solid #C89A6F;border-radius:8px;padding:10px;background:#FFFBF5;}
+.dp-notes-box{border:1px solid #C89A6F;border-radius:8px;padding:10px;background:#FFFBF5;break-inside:avoid;}
 .dp-letters{border:1px solid #E5CFBD;border-radius:8px;padding:10px;background:#FDFAF7;font-size:10px;line-height:1.8;}
-.print-footer{margin-top:30px;padding:16px 30px;border-top:2px solid #E5CFBD;display:flex;align-items:center;justify-content:center;gap:10px;}
+.print-footer{margin-top:30px;padding:16px 0;border-top:2px solid #E5CFBD;display:flex;align-items:center;justify-content:center;gap:10px;}
 .print-footer img{height:32px;opacity:.6;}
 .print-footer span{font-size:11px;color:#614C44;font-weight:700;}
-@page{size:A4;margin:12mm 10mm;}
-@media print{body{padding:0;}}`;
-const now=new Date();const dateStr=now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+(now.getHours()%12||12)+':'+(now.getMinutes()<10?'0':'')+now.getMinutes()+' '+(now.getHours()>=12?'م':'ص');
-const header='<div class="print-header"><img src="'+logoSrc+'" alt=""><div class="print-header-title">لوحة مشاريع بلدية بلقرن</div><div class="print-header-text">تقرير مشروع</div></div><div class="print-date">تاريخ الطباعة: '+dateStr+'</div>';
+@page{size:A4;margin:15mm 12mm;}
+@media print{body{padding:10px 20px;}}`;
 const sigSrc=document.querySelector('.sig-img')?.src||'assets/ornaments/developer_sig.png';
 const footer='<div class="print-footer"><img src="'+sigSrc+'" alt=""><span>م. محمد مرعي القرني</span></div>';
 const w=window.open('','_blank');
-w.document.write('<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>تقرير مشروع</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;600;700;800&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>'+header+panel.innerHTML+footer+'</body></html>');
+w.document.write('<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>تقرير مشروع - '+projName.replace(/</g,'')+'</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;600;700;800&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>'+panel.innerHTML+footer+'</body></html>');
 w.document.close();setTimeout(()=>{w.print();w.close();},700);}
 window.printDetail=printDetail;
 document.getElementById('detailOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDetail();});
