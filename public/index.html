@@ -858,14 +858,14 @@ body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-
 .sbadge{font-size:9px;padding:3px 10px;border-radius:10px;border:1px solid #C4BCB9;display:inline-block;background:#fff;}
 .dp-body{padding:16px 30px 20px;display:flex;flex-direction:column;gap:14px;}
 .dp-section{margin-bottom:2px;}
-.dp-section-title{font-size:11px;font-weight:800;color:#614C44;border-bottom:2px solid #E5CFBD;padding-bottom:5px;margin-bottom:8px;letter-spacing:.5px;page-break-after:avoid;break-after:avoid;}
+.dp-section-title{font-size:11px;font-weight:800;color:#614C44;border-bottom:2px solid #E5CFBD;padding-bottom:5px;margin-bottom:8px;letter-spacing:.5px;}
 .dp-grid{display:flex;flex-wrap:wrap;gap:6px;}
 .dp-item{border:1px solid #E5CFBD;border-radius:6px;padding:8px 10px;background:#FDFAF7;width:calc(33.33% - 4px);overflow:hidden;page-break-inside:avoid;break-inside:avoid;}
 .dp-item.full{width:100%;}
 .di-lbl{font-size:8px;color:#887973;margin-bottom:2px;font-weight:700;}
 .di-val{font-size:11px;font-weight:700;color:#392015;}
 .di-val.small{font-size:10px;}
-.dp-prog{border:1px solid #E5CFBD;border-radius:10px;padding:14px;background:#FDFAF7;break-inside:avoid;}
+.dp-prog{border:1px solid #E5CFBD;border-radius:10px;padding:14px;background:#FDFAF7;}
 .dp-prog-hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
 .dp-prog-pct{font-size:28px;font-weight:900;}
 .dp-track{height:8px;background:#E5CFBD;border-radius:4px;overflow:hidden;}
@@ -875,19 +875,17 @@ body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-
 .date-item{border:1px solid #E5CFBD;border-radius:6px;padding:6px;text-align:center;background:#FDFAF7;width:calc(25% - 5px);overflow:hidden;page-break-inside:avoid;break-inside:avoid;}
 .date-lbl{font-size:7px;color:#887973;margin-bottom:2px;font-weight:700;}
 .date-val{font-size:10px;font-weight:700;}
-.dp-action{border:1px solid #973D4B;border-radius:8px;padding:10px;background:#FFF8F9;break-inside:avoid;}
+.dp-action{border:1px solid #973D4B;border-radius:8px;padding:10px;background:#FFF8F9;}
 .dp-action-lbl{font-size:8px;color:#973D4B;font-weight:800;margin-bottom:3px;}
 .dp-action-txt{font-size:11px;font-weight:600;}
-.dp-brief-box{border:1px solid #E5CFBD;border-radius:8px;padding:10px;background:#FDFAF7;break-inside:avoid;}
+.dp-brief-box{border:1px solid #E5CFBD;border-radius:8px;padding:10px;background:#FDFAF7;}
 .dp-brief-lbl,.dp-notes-lbl{font-size:8px;font-weight:800;margin-bottom:3px;color:#614C44;}
 .dp-brief-txt,.dp-notes-txt{font-size:11px;font-weight:600;}
-.dp-notes-box{border:1px solid #C89A6F;border-radius:8px;padding:10px;background:#FFFBF5;break-inside:avoid;}
+.dp-notes-box{border:1px solid #C89A6F;border-radius:8px;padding:10px;background:#FFFBF5;}
 .dp-letters{border:1px solid #E5CFBD;border-radius:8px;padding:10px;background:#FDFAF7;font-size:10px;line-height:1.8;}
 .print-header-sig{text-align:left;}.print-header-sig img{height:30px;opacity:.5;}
-@page{size:A4;margin:0;}
-@media print{body{padding:12mm 10mm;}
-.dp-item,.date-item,.dp-action,.dp-brief-box,.dp-notes-box,.dp-letters{page-break-inside:avoid!important;break-inside:avoid!important;}
-.dp-section-title{break-after:avoid!important;}}`;
+@page{size:A4;margin:10mm 12mm;}
+@media print{body{padding:0;}}`;
 const sigSrc=document.querySelector('.sig-img')?.src||'assets/ornaments/developer_sig.png';
 const now=new Date();const dateStr=now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+(now.getHours()%12||12)+':'+(now.getMinutes()<10?'0':'')+now.getMinutes()+' '+(now.getHours()>=12?'م':'ص');
 const header='<div class="print-header"><img src="'+logoSrc+'" alt=""><div class="print-header-title">تقرير مشروع - '+projName.replace(/</g,'&lt;')+'</div><div class="print-header-sig"><img src="'+sigSrc+'" alt=""></div></div><div class="print-date">تاريخ الطباعة: '+dateStr+'</div>';
@@ -938,8 +936,8 @@ td{padding:5px 8px;border-bottom:1px solid #E5CFBD;vertical-align:top;}
 tr:nth-child(even){background:#FDFAF7;}
 tr{break-inside:avoid;}
 .print-header-sig{text-align:left;}.print-header-sig img{height:30px;opacity:.5;}
-@page{size:A4 landscape;margin:0;}
-@media print{body{padding:10mm 8mm;}}`;
+@page{size:A4 landscape;margin:10mm 12mm;}
+@media print{body{padding:0;}}`;
 const html=`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
 <title>تقرير مشاريع بلدية بلقرن</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;600;700;800&display=swap" rel="stylesheet">
