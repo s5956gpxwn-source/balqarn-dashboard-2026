@@ -756,7 +756,7 @@ function openDetail(id){
       </div>
       <div class="dp-head-actions">
         ${currentUser&&currentUser.role==='admin'?`<button class="dp-edit-btn" onclick="editProject(${p.id})">&#9998; تعديل</button><button class="dp-del-btn" onclick="deleteProject(${p.id})">&#128465; حذف</button>`:''}
-        <button class="dp-edit-btn" style="background:var(--glass);color:var(--text2);border-color:var(--gborder2);" onclick="printDetail()" title="طباعة التقرير أو حفظه كملف PDF من نافذة الطباعة">&#9113; PDF / طباعة</button>
+        <button class="dp-edit-btn" style="background:var(--glass);color:var(--text2);border-color:var(--gborder2);" onclick="printDetail()">&#9113; طباعة / PDF</button>
         <button class="btn-close" onclick="closeDetail()">&#x2715;</button>
       </div>
     </div>
@@ -855,7 +855,9 @@ body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-
 .dp-name{font-size:17px;font-weight:900;color:#392015;}
 .sbadge{font-size:9px;padding:3px 10px;border-radius:10px;border:1px solid #C4BCB9;display:inline-block;background:#fff;}
 .dp-body{padding:16px 30px 20px;display:flex;flex-direction:column;gap:14px;}
-.dp-section{page-break-inside:avoid;break-inside:avoid;margin-bottom:2px;}
+.dp-section{margin-bottom:2px;break-inside:avoid;page-break-inside:avoid;}
+.dp-head{break-inside:avoid;page-break-inside:avoid;}
+.dp-brief-box,.dp-notes-box{break-inside:avoid;page-break-inside:avoid;}
 .dp-section-title{font-size:11px;font-weight:800;color:#614C44;border-bottom:2px solid #E5CFBD;padding-bottom:5px;margin-bottom:8px;letter-spacing:.5px;page-break-after:avoid;break-after:avoid;}
 .dp-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
 .dp-item{border:1px solid #E5CFBD;border-radius:6px;padding:8px 10px;background:#FDFAF7;page-break-inside:avoid;}
@@ -881,12 +883,15 @@ body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-
 .dp-brief-txt,.dp-notes-txt{font-size:11px;font-weight:600;}
 .dp-notes-box{border:1px solid #C89A6F;border-radius:8px;padding:10px;background:#FFFBF5;}
 .dp-letters{border:1px solid #E5CFBD;border-radius:8px;padding:10px;background:#FDFAF7;font-size:10px;line-height:1.8;}
-.print-footer{margin-top:20px;padding:10px 30px;border-top:2px solid #E5CFBD;font-size:8px;color:#887973;text-align:center;}
+.print-footer{margin-top:30px;padding:16px 30px;border-top:2px solid #E5CFBD;display:flex;align-items:center;justify-content:center;gap:10px;}
+.print-footer img{height:32px;opacity:.6;}
+.print-footer span{font-size:11px;color:#614C44;font-weight:700;}
 @page{size:A4;margin:12mm 10mm;}
 @media print{body{padding:0;}}`;
 const now=new Date();const dateStr=now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+(now.getHours()%12||12)+':'+(now.getMinutes()<10?'0':'')+now.getMinutes()+' '+(now.getHours()>=12?'م':'ص');
 const header='<div class="print-header"><img src="'+logoSrc+'" alt=""><div class="print-header-title">لوحة مشاريع بلدية بلقرن</div><div class="print-header-text">تقرير مشروع</div></div><div class="print-date">تاريخ الطباعة: '+dateStr+'</div>';
-const footer='<div class="print-footer">لوحة مشاريع بلدية بلقرن — هذا التقرير تم إنشاؤه تلقائياً</div>';
+const sigSrc=document.querySelector('.sig-img')?.src||'assets/ornaments/developer_sig.png';
+const footer='<div class="print-footer"><img src="'+sigSrc+'" alt=""><span>م. محمد مرعي القرني</span></div>';
 const w=window.open('','_blank');
 w.document.write('<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>تقرير مشروع</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;600;700;800&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>'+header+panel.innerHTML+footer+'</body></html>');
 w.document.close();setTimeout(()=>{w.print();w.close();},700);}
