@@ -135,7 +135,7 @@ body.dark .orn-bar img{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 footer{margin-top:40px;}
 .footer-sig{display:flex;align-items:center;justify-content:center;gap:10px;padding:16px 28px 10px;color:var(--text3);font-size:12px;font-weight:700;}
 .sig-img{height:38px;width:auto;filter:var(--sig-filter);opacity:var(--sig-op);transition:var(--tr);}
-.footer-copy{font-size:10px;color:var(--text4);text-align:center;padding:10px 28px 20px;line-height:1.8;max-width:700px;margin:0 auto;}
+.footer-copy{font-size:9px;color:var(--text4);text-align:center;padding:8px 20px 18px;line-height:1.6;max-width:620px;margin:0 auto;}
 .overlay{position:fixed;inset:0;background:var(--overlay-bg,rgba(57,32,21,.55));backdrop-filter:blur(10px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;}
 .overlay.open{opacity:1;pointer-events:all;}
 .detail-panel{background:var(--bg);border:1px solid var(--gborder2);border-radius:22px;width:92%;max-width:680px;max-height:92vh;overflow-y:auto;overscroll-behavior:contain;transform:translateY(14px);transition:transform .3s;}
@@ -1386,7 +1386,7 @@ async function deleteProject(id){
   renderAll();
   }finally{_busy=false;}
 }
-document.getElementById('footerCopy').innerHTML=`جميع الحقوق محفوظة &copy; ${new Date().getFullYear()} — م. محمد مرعي القرني<br>هذا الموقع غير رسمي وتم إعداده لأغراض البحث والتدريب فقط، ولا يمثّل أي جهة حكومية ولم يصدر بموافقتها.<br>يُمنع منعًا باتًا نسخ أو إعادة نشر أو مشاركة أي محتوى أو بيانات واردة في هذا الموقع بأي وسيلة كانت.<br>المطوّر يُخلي مسؤوليته الكاملة عن أي استخدام غير مصرّح به لمحتوى هذا الموقع.`;
+document.getElementById('footerCopy').innerHTML=`<strong>تنبيه هام — وصول مقيد</strong><br>هذا الموقع مقيد الوصول ومخصص للمستخدمين المصرح لهم فقط. يُمنع مشاركة رابط الدخول أو بيانات تسجيل الدخول مع أي طرف غير مصرح له.<br>هذا الموقع غير رسمي وأُعدّ لأغراض البحث والتدريب التقني حصراً، ولا يمثّل بلدية محافظة بلقرن ولم يصدر بموافقتها الرسمية ولا يرتبط بها بأي صفة رسمية.<br>جميع البيانات والمحتوى الواردة هنا مصدرها منشورات ومصادر متاحة للعموم كالقنوات الإعلامية الرسمية للجهة ولوحات بيانات المشاريع المنشورة علناً، ولم يتم الحصول على أي منها عبر مصادر غير مصرح بها.<br>للجهة المعنية أو لأي شخص تتعلق به البيانات الواردة هنا الحق الكامل في طلب تعديلها أو حذفها فوراً عبر التواصل على: mohammad087087@gmail.com<br>يُمنع منعاً باتاً نسخ أو إعادة نشر أي محتوى وارد في هذا الموقع لأي غرض كان.<br>المطوّر يُخلي مسؤوليته الكاملة عن أي استخدام غير مصرح به.<br>جميع الحقوق محفوظة &copy; ${new Date().getFullYear()}`;
 
 function importExcel(input){
   if(_busy)return;
