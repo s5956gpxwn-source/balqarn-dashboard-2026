@@ -137,7 +137,7 @@ body.dark .orn-bar img{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 footer{margin-top:40px;}
 .footer-sig{display:flex;align-items:center;justify-content:center;gap:10px;padding:16px 28px 10px;color:var(--text3);font-size:12px;font-weight:700;}
 .sig-img{height:38px;width:auto;filter:var(--sig-filter);opacity:var(--sig-op);transition:var(--tr);}
-.footer-copy{font-size:9px;color:var(--text4);text-align:center;padding:8px 20px 18px;line-height:1.6;max-width:620px;margin:0 auto;}
+.footer-copy{font-size:9px;color:var(--text4);text-align:center;padding:8px 20px 18px;line-height:1.6;max-width:1200px;margin:0 auto;}
 .overlay{position:fixed;inset:0;background:var(--overlay-bg,rgba(57,32,21,.55));backdrop-filter:blur(10px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;}
 .overlay.open{opacity:1;pointer-events:all;}
 .detail-panel{background:var(--bg);border:1px solid var(--gborder2);border-radius:22px;width:92%;max-width:680px;max-height:92vh;overflow-y:auto;overscroll-behavior:contain;transform:translateY(14px);transition:transform .3s;}
@@ -205,6 +205,7 @@ footer{margin-top:40px;}
 .login-box{background:var(--glass2);border:1px solid var(--gborder2);border-radius:22px;padding:40px 36px;width:90%;max-width:380px;text-align:center;box-shadow:0 20px 60px var(--shadow);}
 .login-logo{height:100px;margin-bottom:16px;}
 .login-footer{display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px;color:var(--text3);font-weight:700;margin-top:18px;padding-top:12px;border-top:1px solid var(--gborder);}
+.login-disclaimer{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:94%;max-width:1200px;font-size:8px;color:var(--text4);text-align:center;line-height:1.5;padding:6px 12px;opacity:.7;}
 .welcome-msg{font-size:12px;color:var(--text3);font-weight:600;padding:6px 12px;border-radius:8px;background:var(--glass);border:1px solid var(--gborder);line-height:1.6;}
 .login-title{font-size:18px;font-weight:900;color:var(--text);margin-bottom:20px;}
 .login-sub{font-size:12px;color:var(--text3);margin-bottom:24px;}
@@ -248,6 +249,7 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
     <div class="login-error" id="loginError"></div>
     <div class="login-footer" id="loginFooter"><span>تطوير</span></div>
   </div>
+  <div class="login-disclaimer" id="loginDisclaimer"></div>
 </div>
 <header>
   <div class="hdr">
@@ -762,8 +764,7 @@ function openDetail(id){
         </div>
       </div>
       <div class="dp-head-actions">
-        ${currentUser&&currentUser.role==='admin'?`<button class="dp-edit-btn" onclick="editProject(${p.id})">&#9998; تعديل</button><button class="dp-del-btn" onclick="deleteProject(${p.id})">&#128465; حذف</button>`:''}
-        <button class="dp-edit-btn" style="background:var(--glass);color:var(--text2);border-color:var(--gborder2);" onclick="printDetail()">&#9113; طباعة / PDF</button>
+        ${currentUser&&currentUser.role==='admin'?`<button class="dp-edit-btn" onclick="editProject(${p.id})">&#9998; تعديل</button><button class="dp-del-btn" onclick="deleteProject(${p.id})">&#128465; حذف</button><button class="dp-edit-btn" style="background:var(--glass);color:var(--text2);border-color:var(--gborder2);" onclick="printDetail()">&#9113; طباعة / PDF</button>`:''}
         <button class="btn-close" onclick="closeDetail()">&#x2715;</button>
       </div>
     </div>
@@ -1388,7 +1389,9 @@ async function deleteProject(id){
   renderAll();
   }finally{_busy=false;}
 }
-document.getElementById('footerCopy').innerHTML=`<strong>تنبيه هام — وصول مقيد</strong><br>هذا الموقع مقيد الوصول ومخصص للمستخدمين المصرح لهم فقط. يُمنع مشاركة رابط الدخول أو بيانات تسجيل الدخول مع أي طرف غير مصرح له.<br>هذا الموقع غير رسمي وأُعدّ لأغراض البحث والتدريب التقني حصراً، ولا يمثّل بلدية محافظة بلقرن ولم يصدر بموافقتها الرسمية ولا يرتبط بها بأي صفة رسمية.<br>جميع البيانات والمحتوى الواردة هنا مصدرها منشورات ومصادر متاحة للعموم كالقنوات الإعلامية الرسمية للجهة ولوحات بيانات المشاريع المنشورة علناً، ولم يتم الحصول على أي منها عبر مصادر غير مصرح بها.<br>للجهة المعنية أو لأي شخص تتعلق به البيانات الواردة هنا الحق الكامل في طلب تعديلها أو حذفها فوراً عبر التواصل على: mohammad087087@gmail.com<br>يُمنع منعاً باتاً نسخ أو إعادة نشر أي محتوى وارد في هذا الموقع لأي غرض كان.<br>المطوّر يُخلي مسؤوليته الكاملة عن أي استخدام غير مصرح به.<br>جميع الحقوق محفوظة &copy; ${new Date().getFullYear()}`;
+const _disclaimerHTML=`<strong>تنبيه تقني — بيئة عرض برمجية (PROTOTYPE)</strong><br>هذا الموقع ليس منصة رسمية ولا يمثل أي جهة حكومية. هذا الموقع عبارة عن "نموذج أولي" (Technical Prototype) مخصص حصراً لعرض مهارات تطوير الويب وبرمجة واجهات المستخدم (UI/UX)، وتم إنشاؤه لأغراض التدريب والبحث التقني الشخصي للمطور. يخلي المطور مسؤوليته الكاملة عن أي اعتقاد بتبعية هذا العمل لبلدية محافظة بلقرن أو أي جهة حكومية أخرى، حيث أن هذا العمل مبادرة تقنية فردية مستقلة ولم يصدر بتكليف أو موافقة رسمية ولا يرتبط بالجهة المذكورة بأي صفة قانونية أو إدارية. جميع البيانات والمعلومات المعروضة (مثل أسماء المشاريع، المقاولين، ونسب الإنجاز) هي معلومات متاحة للعموم ومستقاة من مصادر مفتوحة، تشمل اللوحات التعريفية للمشاريع في الميدان، منصة اعتماد الحكومية، منصة مستكشف عسير، الأخبار الصحفية، التقارير الإعلامية في الصحف، والمنشورات عبر وسائل التواصل الاجتماعي التابعة للجهات الرسمية أو المقاولين المنفذين أو المهتمين والإعلاميين، ولا يحتوي الموقع على أي بيانات سرية أو وثائق داخلية غير مصرح بنشرها. للجهة المعنية أو أي طرف ذو علاقة الحق الكامل في طلب تعديل أو حذف أي بيانات تتعلق به، وسيتم التجاوب فوراً عبر التواصل على البريد الإلكتروني: mohammad087087@gmail.com<br>الدخول لهذا الموقع مقيد ومحمي، ويُمنع منعاً باتاً مشاركة روابط الدخول أو إعادة نشر المحتوى لأي غرض كان، واستخدامك للموقع يعني إقرارك بطبيعته كـ "عرض تجريبي" فقط. هذه البيانات لا تعكس بالضرورة معلومات دقيقة أو رسمية، ولا علاقة لها بالبيانات المعتمدة في المصادر الرسمية أو غيرها، والمطور غير مسؤول عن أي استخدام غير مصرح به أو أي قرارات تُتخذ بناءً على هذه البيانات التي قد تخضع للتحديث أو التغيير الدائم في مصادرها الأصلية.<br>جميع الحقوق البرمجية محفوظة للمطور &copy; ${new Date().getFullYear()}`;
+document.getElementById('footerCopy').innerHTML=_disclaimerHTML;
+document.getElementById('loginDisclaimer').innerHTML=_disclaimerHTML;
 
 function importExcel(input){
   if(_busy)return;
