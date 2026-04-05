@@ -195,7 +195,7 @@ footer{margin-top:40px;}
 .auth-loading.hidden{opacity:0;pointer-events:none;}
 .auth-loading-spinner{width:36px;height:36px;border:3px solid var(--gborder);border-top:3px solid var(--advanced);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
-.login-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .4s;overflow:hidden;}
+.login-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .4s;overflow-y:auto;}
 .login-orn{position:absolute;width:200px;height:200px;object-fit:contain;opacity:.08;pointer-events:none;}
 .login-orn-1{top:10%;right:5%;}
 .login-orn-2{bottom:10%;left:5%;}
@@ -205,7 +205,8 @@ footer{margin-top:40px;}
 .login-box{background:var(--glass2);border:1px solid var(--gborder2);border-radius:22px;padding:40px 36px;width:90%;max-width:380px;text-align:center;box-shadow:0 20px 60px var(--shadow);}
 .login-logo{height:100px;margin-bottom:16px;}
 .login-footer{display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px;color:var(--text3);font-weight:700;margin-top:18px;padding-top:12px;border-top:1px solid var(--gborder);}
-.login-disclaimer{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:94%;max-width:1200px;font-size:8px;color:var(--text4);text-align:center;line-height:1.5;padding:6px 12px;opacity:.7;}
+.login-wrap{display:flex;flex-direction:column;align-items:center;padding:20px 0;width:100%;}
+.login-disclaimer{width:90%;max-width:700px;font-size:7.5px;color:var(--text4);text-align:center;line-height:1.5;padding:10px 16px;opacity:.65;flex-shrink:0;}
 .welcome-msg{font-size:12px;color:var(--text3);font-weight:600;padding:6px 12px;border-radius:8px;background:var(--glass);border:1px solid var(--gborder);line-height:1.6;}
 .login-title{font-size:18px;font-weight:900;color:var(--text);margin-bottom:20px;}
 .login-sub{font-size:12px;color:var(--text3);margin-bottom:24px;}
@@ -240,16 +241,18 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
   <img class="login-orn login-orn-2" id="lOrn2" alt="">
   <img class="login-orn login-orn-3" id="lOrn3" alt="">
   <img class="login-orn login-orn-4" id="lOrn4" alt="">
-  <div class="login-box">
-    <img class="login-logo" src="BB.png" alt="شعار بلدية بلقرن">
-    <div class="login-title">إدارة المشاريع</div>
-    <input class="login-input" type="email" id="loginUser" placeholder="البريد الإلكتروني" autocomplete="username">
-    <input class="login-input" type="password" id="loginPass" placeholder="كلمة المرور" autocomplete="current-password">
-    <button class="login-btn" onclick="doLogin()">تسجيل الدخول</button>
-    <div class="login-error" id="loginError"></div>
-    <div class="login-footer" id="loginFooter"><span>تطوير</span></div>
+  <div class="login-wrap">
+    <div class="login-box">
+      <img class="login-logo" src="BB.png" alt="شعار بلدية بلقرن">
+      <div class="login-title">إدارة المشاريع</div>
+      <input class="login-input" type="email" id="loginUser" placeholder="البريد الإلكتروني" autocomplete="username">
+      <input class="login-input" type="password" id="loginPass" placeholder="كلمة المرور" autocomplete="current-password">
+      <button class="login-btn" onclick="doLogin()">تسجيل الدخول</button>
+      <div class="login-error" id="loginError"></div>
+      <div class="login-footer" id="loginFooter"><span>تطوير</span></div>
+    </div>
+    <div class="login-disclaimer" id="loginDisclaimer"></div>
   </div>
-  <div class="login-disclaimer" id="loginDisclaimer"></div>
 </div>
 <header>
   <div class="hdr">
