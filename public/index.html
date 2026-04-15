@@ -278,6 +278,7 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
         <button class="export-btn admin-only" onclick="exportExcel()" title="تصدير Excel" style="display:none">&#128229; تصدير</button>
         <button class="export-btn admin-only" onclick="openPrintSettings()" style="display:none">&#9113; طباعة / PDF</button>
         <button class="export-btn admin-only" onclick="openFieldsManager()" title="إدارة الأعمدة" style="display:none">&#9881; إخفاء أعمدة</button>
+        <button class="export-btn admin-only" onclick="openBackupsManager()" title="النسخ الاحتياطية" style="display:none">&#128190; النسخ الاحتياطية</button>
       </div>
       <button class="theme-btn" id="themeToggle" onclick="toggleTheme()" title="تبديل الثيم">&#9790;</button>
       <button class="export-btn" onclick="doLogout()" title="تسجيل خروج">&#x2190; خروج</button>
@@ -765,14 +766,14 @@ function row(lbl,val,full,safe){
   const orn=ORNS[ornKeys[_rowOrnIdx%ornKeys.length]];
   _rowOrnIdx++;
   const hiddenTag=(currentUser&&currentUser.role==='admin'&&hiddenFields.includes(lbl))?'<span style="font-size:8px;color:var(--stalled);margin-right:4px">🔒 مخفي</span>':'';
-  return `<div class="dp-item${full?' full':''}"><img class="dp-item-orn" src="${orn}"><div class="di-lbl">${hiddenTag}${escapeHtml(lbl)}</div><div class="di-val">${v}</div></div>`;
+  return `<div class="dp-item${full?' full':''}" data-pf="${escapeHtml(lbl)}"><img class="dp-item-orn" src="${orn}"><div class="di-lbl">${hiddenTag}${escapeHtml(lbl)}</div><div class="di-val">${v}</div></div>`;
 }
 
 function openDetail(id){
   _rowOrnIdx=0;
   const p=projects.find(x=>x.id===id);if(!p)return;
   const C=COLORS[p.status];
-  const dtrow=(l,v)=>{if(!v||isFieldHidden(l))return '';const ht=(currentUser&&currentUser.role==='admin'&&hiddenFields.includes(l))?'<span style="font-size:7px;color:var(--stalled)">🔒</span> ':'';return `<div class="date-item"><div class="date-lbl">${ht}${l}</div><div class="date-val">${v}</div></div>`;};
+  const dtrow=(l,v)=>{if(!v||isFieldHidden(l))return '';const ht=(currentUser&&currentUser.role==='admin'&&hiddenFields.includes(l))?'<span style="font-size:7px;color:var(--stalled)">🔒</span> ':'';return `<div class="date-item" data-pf="${escapeHtml(l)}"><div class="date-lbl">${ht}${l}</div><div class="date-val">${v}</div></div>`;};
 
   const orn=CARD_ORNS[p.id%CARD_ORNS.length];
   document.getElementById('detailPanel').innerHTML=`
@@ -787,13 +788,13 @@ function openDetail(id){
         </div>
       </div>
       <div class="dp-head-actions">
-        ${currentUser&&currentUser.role==='admin'?`<button class="dp-edit-btn" onclick="editProject(${p.id})">&#9998; تعديل</button><button class="dp-del-btn" onclick="deleteProject(${p.id})">&#128465; حذف</button><button class="dp-edit-btn" style="background:var(--glass);color:var(--text2);border-color:var(--gborder2);" onclick="printDetail()">&#9113; طباعة / PDF</button>`:''}
+        ${currentUser&&currentUser.role==='admin'?`<button class="dp-edit-btn" onclick="editProject(${p.id})">&#9998; تعديل</button><button class="dp-del-btn" onclick="deleteProject(${p.id})">&#128465; حذف</button><button class="dp-edit-btn" style="background:var(--glass);color:var(--text2);border-color:var(--gborder2);" onclick="openProjectPrintSettings(${p.id})">&#9113; طباعة / PDF</button>`:''}
         <button class="btn-close" onclick="closeDetail()">&#x2715;</button>
       </div>
     </div>
     <div class="dp-body">
 
-      <div class="dp-prog">
+      <div class="dp-prog" data-pf="نسبة الإنجاز">
         <img class="dp-section-orn" src="${ORNS['takatuf']}" style="top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;">
         <div class="dp-prog-hdr">
           <div>
@@ -807,25 +808,25 @@ function openDetail(id){
       </div>
 
       ${p.last_action?`
-      <div class="dp-action">
+      <div class="dp-action" data-pf="آخر إجراء">
         <div class="dp-action-lbl">آخر اجراء</div>
         <div class="dp-action-txt">${escapeHtml(p.last_action)}</div>
       </div>`:''}
 
       ${p.project_brief&&!isFieldHidden('نبذة سريعة عن حالة المشروع')?`
-      <div class="dp-brief-box">
+      <div class="dp-brief-box" data-pf="نبذة سريعة عن حالة المشروع">
         <div class="dp-brief-lbl">${currentUser&&currentUser.role==='admin'&&hiddenFields.includes('نبذة سريعة عن حالة المشروع')?'<span style="font-size:8px;color:var(--stalled)">🔒</span> ':''}نبذة سريعة عن حالة المشروع</div>
         <div class="dp-brief-txt">${escapeHtml(p.project_brief)}</div>
       </div>`:''}
 
       ${p.notes&&!isFieldHidden('الملاحظات')?`
-      <div class="dp-notes-box">
+      <div class="dp-notes-box" data-pf="الملاحظات">
         <div class="dp-notes-lbl">${currentUser&&currentUser.role==='admin'&&hiddenFields.includes('الملاحظات')?'<span style="font-size:8px;color:var(--stalled)">🔒</span> ':''}الملاحظات</div>
         <div class="dp-notes-txt">${escapeHtml(p.notes)}</div>
       </div>`:''}
 
       ${p.letters&&!isFieldHidden('الخطابات والمعاملات')?`
-      <div class="dp-section">
+      <div class="dp-section" data-pf="الخطابات والمعاملات">
         <img class="dp-section-orn" src="${ORNS['shajara']}" alt="">
         <div class="dp-section-title">${currentUser&&currentUser.role==='admin'&&hiddenFields.includes('الخطابات والمعاملات')?'<span style="font-size:8px;color:var(--stalled)">🔒</span> ':''}الخطابات والمعاملات</div>
         <div class="dp-grid">
@@ -923,13 +924,106 @@ const safeName=escapeHtml(projName);
 const safeLogo=escapeHtml(logoSrc);
 const safeSig=escapeHtml(sigSrc);
 const header='<div class="print-header"><img src="'+safeLogo+'" alt=""><div class="print-header-title">تقرير مشروع - '+safeName+'</div><div class="print-header-sig"><img src="'+safeSig+'" alt=""></div></div><div class="print-date">تاريخ الطباعة: '+escapeHtml(dateStr)+'</div>';
-const clone=panel.cloneNode(true);clone.querySelectorAll('.dp-item,.date-item').forEach(el=>{if(el.textContent.includes('🔒'))el.remove();});clone.querySelectorAll('.dp-brief-box,.dp-notes-box,.dp-section').forEach(el=>{if(el.textContent.includes('🔒'))el.remove();});clone.querySelectorAll('.dp-section').forEach(el=>{const grid=el.querySelector('.dp-grid,.dates-strip');if(grid&&!grid.children.length)el.remove();else if(!grid&&!el.querySelector('.dp-item,.date-item,.dp-letters'))el.remove();});
+const clone=panel.cloneNode(true);
+// إزالة العناصر التي اختار المستخدم استثناءها من الطباعة
+clone.querySelectorAll('[data-pf]').forEach(el=>{const k=el.getAttribute('data-pf');if(_printDetailExcluded.has(k))el.remove();});
+clone.querySelectorAll('.dp-item,.date-item').forEach(el=>{if(el.textContent.includes('🔒'))el.remove();});
+clone.querySelectorAll('.dp-brief-box,.dp-notes-box,.dp-section').forEach(el=>{if(el.textContent.includes('🔒'))el.remove();});
+clone.querySelectorAll('.dp-section').forEach(el=>{const grid=el.querySelector('.dp-grid,.dates-strip');if(grid&&!grid.children.length)el.remove();else if(!grid&&!el.querySelector('.dp-item,.date-item,.dp-letters'))el.remove();});
 const printHtml='<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src * data:; style-src \'unsafe-inline\' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:;"><title>تقرير مشروع - '+safeName.replace(/[<>]/g,'')+'</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;600;700;800&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>'+header+clone.innerHTML+'</body></html>';
 const blob=new Blob([printHtml],{type:'text/html'});
 const url=URL.createObjectURL(blob);
 const w=window.open(url,'_blank');
 setTimeout(()=>{try{w.print();}catch(e){}setTimeout(()=>{try{w.close();}catch(e){}URL.revokeObjectURL(url);},500);},800);}
 window.printDetail=printDetail;
+
+// ─── إعدادات طباعة مشروع واحد ───
+// مجموعة الحقول المستثناة من الطباعة. تُحفظ خلال الجلسة فقط.
+const _printDetailExcluded=new Set();
+
+function openProjectPrintSettings(id){
+  if(!currentUser||currentUser.role!=='admin')return;
+  const p=projects.find(x=>x.id===id);if(!p)return;
+  // أعد رسم تفاصيل المشروع أولاً لضمان التقاط جميع الحقول الحالية
+  openDetail(id);
+  // اقرأ كل الحقول من اللوحة الحالية
+  const panel=document.getElementById('detailPanel');
+  const all=Array.from(panel.querySelectorAll('[data-pf]')).map(el=>el.getAttribute('data-pf'));
+  // إزالة التكرار مع الحفاظ على الترتيب
+  const seen=new Set();const fields=[];
+  all.forEach(f=>{if(!seen.has(f)){seen.add(f);fields.push(f);}});
+  if(!fields.length){alert('لا توجد بيانات قابلة للطباعة في هذا المشروع');return;}
+  const allSelected=fields.every(f=>!_printDetailExcluded.has(f));
+  panel.innerHTML=`
+    <div class="dp-head">
+      <div>
+        <div class="dp-name">إعدادات طباعة المشروع</div>
+        <div style="margin-top:4px;font-size:11px;color:var(--text3)">${escapeHtml(p.name)}</div>
+        <div style="margin-top:4px;font-size:10px;color:var(--text3)">اختر الحقول التي تريد إدراجها في الطباعة</div>
+      </div>
+      <div class="dp-head-actions">
+        <button class="btn-close" onclick="cancelProjectPrintSettings(${p.id})">&#x2715;</button>
+      </div>
+    </div>
+    <div class="dp-body">
+      <div style="margin-bottom:6px;">
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--advancedt);border:1px solid var(--advanced);border-radius:8px;font-size:12px;font-weight:700;color:var(--advanced);cursor:pointer;">
+          <input type="checkbox" ${allSelected?'checked':''} onchange="toggleAllProjectPrintFields(${p.id},this.checked)" style="width:16px;height:16px;accent-color:var(--advanced);cursor:pointer;">
+          <span>تحديد / إلغاء الكل (${fields.length} حقل)</span>
+        </label>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        ${fields.map(f=>{const checked=!_printDetailExcluded.has(f);const isHidden=hiddenFields.includes(f);return `
+          <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--glass);border:1px solid var(--gborder);border-radius:8px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">
+            <input type="checkbox" ${checked?'checked':''} onchange="toggleProjectPrintField('${f.replace(/'/g,"\\'")}',this.checked,${p.id})" style="width:15px;height:15px;accent-color:var(--advanced);cursor:pointer;">
+            <span style="flex:1">${escapeHtml(f)}</span>
+            ${isHidden?'<span style="font-size:9px;color:var(--stalled);font-weight:700">🔒 مخفي عن المستخدمين</span>':''}
+          </label>`;}).join('')}
+      </div>
+      <div class="dp-form-actions">
+        <button class="dp-save-btn" onclick="confirmProjectPrint(${p.id})">&#9113; طباعة الآن</button>
+        <button class="dp-cancel-btn" onclick="cancelProjectPrintSettings(${p.id})">إلغاء</button>
+      </div>
+    </div>`;
+  panel.scrollTop=0;
+}
+
+function toggleProjectPrintField(field,on,id){
+  if(on)_printDetailExcluded.delete(field);
+  else _printDetailExcluded.add(field);
+  const panel=document.getElementById('detailPanel');const sp=panel.scrollTop;
+  openProjectPrintSettings(id);panel.scrollTop=sp;
+}
+
+function toggleAllProjectPrintFields(id,on){
+  const p=projects.find(x=>x.id===id);if(!p)return;
+  // أعد رسم التفاصيل لأخذ قائمة الحقول
+  const tmpPanel=document.createElement('div');
+  // طريقة مباشرة: استخدم الحقول الحالية المعروضة قبل الإغلاق
+  // لكن الـ panel الآن يعرض الإعدادات؛ لذا نعتمد على فتح openDetail ثم القراءة
+  openDetail(id);
+  const panel=document.getElementById('detailPanel');
+  const fields=Array.from(panel.querySelectorAll('[data-pf]')).map(el=>el.getAttribute('data-pf'));
+  if(on){fields.forEach(f=>_printDetailExcluded.delete(f));}
+  else{fields.forEach(f=>_printDetailExcluded.add(f));}
+  openProjectPrintSettings(id);
+}
+
+function confirmProjectPrint(id){
+  // أعد رسم تفاصيل المشروع ثم اطبع (printDetail يفلتر بـ _printDetailExcluded)
+  openDetail(id);
+  setTimeout(()=>{printDetail();},150);
+}
+
+function cancelProjectPrintSettings(id){
+  openDetail(id);
+}
+
+window.openProjectPrintSettings=openProjectPrintSettings;
+window.toggleProjectPrintField=toggleProjectPrintField;
+window.toggleAllProjectPrintFields=toggleAllProjectPrintFields;
+window.confirmProjectPrint=confirmProjectPrint;
+window.cancelProjectPrintSettings=cancelProjectPrintSettings;
 
 const PRINT_COLS=[
 {key:'name',label:'اسم المشروع',get:p=>p.name||'',style:'font-weight:700;',on:true},
@@ -1792,6 +1886,100 @@ async function toggleFieldVisibility(field,hide){
   panel.scrollTop=scrollPos;
 }
 window.toggleFieldVisibility=toggleFieldVisibility;
+
+// ─── إدارة النسخ الاحتياطية المحلية ───
+// النسخ تُحفظ في localStorage تلقائياً قبل كل عملية استيراد Excel
+// مفتاح كل نسخة: projectsBackup_<ISO timestamp>
+function listLocalBackups(){
+  const keys=Object.keys(localStorage).filter(k=>k.startsWith('projectsBackup_')).sort().reverse();
+  return keys.map(k=>{
+    try{
+      const data=JSON.parse(localStorage.getItem(k));
+      if(!data||!Array.isArray(data.projects))return null;
+      return {key:k,savedAt:data.savedAt||k.replace('projectsBackup_',''),count:data.projects.length};
+    }catch(e){return null;}
+  }).filter(Boolean);
+}
+
+function openBackupsManager(){
+  if(!currentUser||currentUser.role!=='admin')return;
+  const items=listLocalBackups();
+  const panel=document.getElementById('detailPanel');
+  panel.innerHTML=`
+    <div class="dp-head">
+      <div>
+        <div class="dp-name">النسخ الاحتياطية المحلية</div>
+        <div style="margin-top:4px;font-size:11px;color:var(--text3)">${items.length} نسخة محفوظة (الحد الأقصى 5)</div>
+      </div>
+      <div class="dp-head-actions"><button class="btn-close" onclick="closeDetail()">&#x2715;</button></div>
+    </div>
+    <div class="dp-body">
+      <div style="background:var(--pendingt);border:1px solid var(--pending);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:var(--pending);font-weight:700;line-height:1.7;">
+        &#9888; هذه النسخ محفوظة في متصفحك على هذا الجهاز فقط. لن تجدها لو فتحت الموقع من جهاز أو متصفح آخر، أو لو مسحت بيانات المتصفح.
+        <br>تُنشأ النسخة تلقائياً قبل كل عملية استيراد Excel. الاسترجاع يستبدل كامل بيانات المشاريع في Firestore.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${items.length===0?'<div style="text-align:center;color:var(--text4);padding:30px;font-size:12px;">لا توجد نسخ احتياطية بعد. ستُنشأ تلقائياً قبل أول عملية استيراد.</div>':items.map(it=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--glass);border:1px solid var(--gborder);border-radius:10px;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:12px;font-weight:800;color:var(--text);">${escapeHtml(formatDateTime(it.savedAt))}</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:3px;">${it.count} مشروع</div>
+            </div>
+            <button class="dp-edit-btn" onclick="restoreBackup('${escapeHtml(it.key)}')">&#8634; استرجاع</button>
+            <button class="dp-del-btn" onclick="deleteBackup('${escapeHtml(it.key)}')">&#128465; حذف</button>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  document.getElementById('detailOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+  panel.scrollTop=0;
+}
+
+async function restoreBackup(key){
+  if(_busy)return;
+  if(!currentUser||currentUser.role!=='admin')return;
+  const raw=localStorage.getItem(key);
+  if(!raw){alert('النسخة غير موجودة');return;}
+  let data;
+  try{data=JSON.parse(raw);}catch(e){alert('النسخة تالفة');return;}
+  if(!data||!Array.isArray(data.projects)){alert('النسخة تالفة');return;}
+  if(!confirm('سيتم استبدال جميع المشاريع الحالية ('+projects.length+') بـ '+data.projects.length+' مشروع من النسخة المحفوظة بتاريخ:\n'+formatDateTime(data.savedAt)+'\n\nسيتم أخذ نسخة احتياطية للحالة الحالية أولاً. هل أنت متأكد؟'))return;
+  _busy=true;
+  // نسخة احتياطية محلية للحالة الحالية قبل الاسترجاع
+  try{
+    const newKey='projectsBackup_'+new Date().toISOString().replace(/[:.]/g,'-');
+    localStorage.setItem(newKey,JSON.stringify({savedAt:new Date().toISOString(),projects}));
+    const allKeys=Object.keys(localStorage).filter(k=>k.startsWith('projectsBackup_')).sort();
+    while(allKeys.length>5){const oldest=allKeys.shift();localStorage.removeItem(oldest);}
+  }catch(e){console.warn('pre-restore backup failed',e);}
+  try{
+    const oldSnap=await getDocs(collection(db,'projects'));
+    const delBatch=writeBatch(db);
+    oldSnap.forEach(d=>delBatch.delete(d.ref));
+    await delBatch.commit();
+    const batch=writeBatch(db);
+    data.projects.forEach(p=>batch.set(doc(db,'projects',String(p.id)),{...p}));
+    await batch.commit();
+  }catch(e){console.error('restoreBackup',e);alert('تعذّر استرجاع النسخة. تحقق من الاتصال والصلاحيات.');_busy=false;return;}
+  projects=data.projects.slice();
+  filter='all';
+  updateLastModified();
+  closeDetail();
+  renderAll();
+  _busy=false;
+  alert('تم استرجاع النسخة بنجاح');
+}
+
+function deleteBackup(key){
+  if(!currentUser||currentUser.role!=='admin')return;
+  if(!confirm('حذف هذه النسخة الاحتياطية نهائياً؟ لا يمكن التراجع.'))return;
+  localStorage.removeItem(key);
+  openBackupsManager();
+}
+
+window.openBackupsManager=openBackupsManager;
+window.restoreBackup=restoreBackup;
+window.deleteBackup=deleteBackup;
 
 // ─── الثيم الليلي ───
 function setTheme(mode){
