@@ -239,6 +239,11 @@ body.dark .card-notes{color:var(--preceipt);}
 body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue-rotate(340deg) brightness(1.8);opacity:.08;}
 .theme-btn{background:var(--glass);border:1px solid var(--gborder);color:var(--text3);width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
 .theme-btn:hover{background:var(--glass2);border-color:var(--gborder2);color:var(--text);}
+.field-lock{display:inline-flex;align-items:center;justify-content:center;background:var(--glass);border:1px solid var(--gborder);border-radius:5px;cursor:pointer;padding:1px 5px;font-size:10px;line-height:1;margin-left:5px;color:var(--text3);font-family:inherit;transition:all .15s;vertical-align:middle;}
+.field-lock:hover{background:var(--glass2);border-color:var(--gborder2);color:var(--text);transform:scale(1.08);}
+.field-lock.locked{background:var(--stalledt);border-color:rgba(151,61,75,.4);color:var(--stalled);}
+.field-lock.locked:hover{background:rgba(151,61,75,.2);}
+@media print{.field-lock{display:none!important;}}
 </style>
 </head>
 <body class="light locked">
@@ -758,6 +763,31 @@ function setFilterFromKPI(f){
 }
 
 let _rowOrnIdx=0;
+let _currentDetailId=null;
+
+// زر قفل صغير بجانب كل حقل — يظهر للأدمن فقط
+// يحوّل الحقل بين مخفي/ظاهر للمستخدمين العاديين
+function lockBtn(label){
+  if(!currentUser||currentUser.role!=='admin')return '';
+  const isHidden=hiddenFields.includes(label);
+  const safe=label.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const title=isHidden?'مخفي عن المستخدمين — اضغط للإظهار':'ظاهر — اضغط للإخفاء عن المستخدمين';
+  return `<button class="field-lock${isHidden?' locked':''}" onclick="event.stopPropagation();quickToggleHide('${safe}')" title="${title}">${isHidden?'&#128274;':'&#128275;'}</button>`;
+}
+
+async function quickToggleHide(field){
+  if(!currentUser||currentUser.role!=='admin')return;
+  if(hiddenFields.includes(field))hiddenFields=hiddenFields.filter(f=>f!==field);
+  else hiddenFields.push(field);
+  await saveHiddenFields();
+  if(_currentDetailId!=null){
+    const sp=document.getElementById('detailPanel').scrollTop;
+    openDetail(_currentDetailId);
+    setTimeout(()=>{const panel=document.getElementById('detailPanel');if(panel)panel.scrollTop=sp;},20);
+  }
+}
+window.quickToggleHide=quickToggleHide;
+
 function row(lbl,val,full,safe){
   if(!val) return '';
   if(isFieldHidden(lbl)) return '';
@@ -765,15 +795,15 @@ function row(lbl,val,full,safe){
   const ornKeys=['tawq','takatuf','arda','sanbala','shajara','qit','jabal'];
   const orn=ORNS[ornKeys[_rowOrnIdx%ornKeys.length]];
   _rowOrnIdx++;
-  const hiddenTag=(currentUser&&currentUser.role==='admin'&&hiddenFields.includes(lbl))?'<span style="font-size:8px;color:var(--stalled);margin-right:4px">🔒 مخفي</span>':'';
-  return `<div class="dp-item${full?' full':''}" data-pf="${escapeHtml(lbl)}"><img class="dp-item-orn" src="${orn}"><div class="di-lbl">${hiddenTag}${escapeHtml(lbl)}</div><div class="di-val">${v}</div></div>`;
+  return `<div class="dp-item${full?' full':''}" data-pf="${escapeHtml(lbl)}"><img class="dp-item-orn" src="${orn}"><div class="di-lbl">${lockBtn(lbl)}${escapeHtml(lbl)}</div><div class="di-val">${v}</div></div>`;
 }
 
 function openDetail(id){
   _rowOrnIdx=0;
   const p=projects.find(x=>x.id===id);if(!p)return;
+  _currentDetailId=id;
   const C=COLORS[p.status];
-  const dtrow=(l,v)=>{if(!v||isFieldHidden(l))return '';const ht=(currentUser&&currentUser.role==='admin'&&hiddenFields.includes(l))?'<span style="font-size:7px;color:var(--stalled)">🔒</span> ':'';return `<div class="date-item" data-pf="${escapeHtml(l)}"><div class="date-lbl">${ht}${l}</div><div class="date-val">${v}</div></div>`;};
+  const dtrow=(l,v)=>{if(!v||isFieldHidden(l))return '';return `<div class="date-item" data-pf="${escapeHtml(l)}"><div class="date-lbl">${lockBtn(l)}${escapeHtml(l)}</div><div class="date-val">${v}</div></div>`;};
 
   const orn=CARD_ORNS[p.id%CARD_ORNS.length];
   document.getElementById('detailPanel').innerHTML=`
@@ -794,8 +824,10 @@ function openDetail(id){
     </div>
     <div class="dp-body">
 
-      <div class="dp-prog" data-pf="نسبة الإنجاز">
+      ${!isFieldHidden('نسبة الإنجاز %')?`
+      <div class="dp-prog" data-pf="نسبة الإنجاز %">
         <img class="dp-section-orn" src="${ORNS['takatuf']}" style="top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;">
+        ${currentUser&&currentUser.role==='admin'?`<div style="position:absolute;top:8px;left:8px;z-index:2;">${lockBtn('نسبة الإنجاز %')}</div>`:''}
         <div class="dp-prog-hdr">
           <div>
             <div class="dp-prog-pct" style="color:${C}">${Number.isInteger(p.progress)?p.progress:p.progress.toFixed(2)}%</div>
@@ -805,30 +837,30 @@ function openDetail(id){
           </div>
         </div>
         <div class="dp-track"><div class="dp-fill f-${p.status}" style="width:0%" id="dpFill"></div></div>
-      </div>
+      </div>`:''}
 
-      ${p.last_action?`
+      ${p.last_action&&!isFieldHidden('آخر إجراء')?`
       <div class="dp-action" data-pf="آخر إجراء">
-        <div class="dp-action-lbl">آخر اجراء</div>
+        <div class="dp-action-lbl">${lockBtn('آخر إجراء')}آخر اجراء</div>
         <div class="dp-action-txt">${escapeHtml(p.last_action)}</div>
       </div>`:''}
 
       ${p.project_brief&&!isFieldHidden('نبذة سريعة عن حالة المشروع')?`
       <div class="dp-brief-box" data-pf="نبذة سريعة عن حالة المشروع">
-        <div class="dp-brief-lbl">${currentUser&&currentUser.role==='admin'&&hiddenFields.includes('نبذة سريعة عن حالة المشروع')?'<span style="font-size:8px;color:var(--stalled)">🔒</span> ':''}نبذة سريعة عن حالة المشروع</div>
+        <div class="dp-brief-lbl">${lockBtn('نبذة سريعة عن حالة المشروع')}نبذة سريعة عن حالة المشروع</div>
         <div class="dp-brief-txt">${escapeHtml(p.project_brief)}</div>
       </div>`:''}
 
       ${p.notes&&!isFieldHidden('الملاحظات')?`
       <div class="dp-notes-box" data-pf="الملاحظات">
-        <div class="dp-notes-lbl">${currentUser&&currentUser.role==='admin'&&hiddenFields.includes('الملاحظات')?'<span style="font-size:8px;color:var(--stalled)">🔒</span> ':''}الملاحظات</div>
+        <div class="dp-notes-lbl">${lockBtn('الملاحظات')}الملاحظات</div>
         <div class="dp-notes-txt">${escapeHtml(p.notes)}</div>
       </div>`:''}
 
       ${p.letters&&!isFieldHidden('الخطابات والمعاملات')?`
       <div class="dp-section" data-pf="الخطابات والمعاملات">
         <img class="dp-section-orn" src="${ORNS['shajara']}" alt="">
-        <div class="dp-section-title">${currentUser&&currentUser.role==='admin'&&hiddenFields.includes('الخطابات والمعاملات')?'<span style="font-size:8px;color:var(--stalled)">🔒</span> ':''}الخطابات والمعاملات</div>
+        <div class="dp-section-title">${lockBtn('الخطابات والمعاملات')}الخطابات والمعاملات</div>
         <div class="dp-grid">
           ${escapeHtml(p.letters).split('؛').map(l=>l.trim()).filter(l=>l).map(l=>`<div class="dp-item"><div class="di-val" style="font-size:11px;line-height:1.6;">${l}</div></div>`).join('')}
         </div>
@@ -871,7 +903,7 @@ function openDetail(id){
   setTimeout(()=>{const f=document.getElementById('dpFill');if(f)f.style.width=p.progress+'%';},60);
 }
 
-function closeDetail(){document.getElementById('detailOverlay').classList.remove('open');document.body.style.overflow='';}
+function closeDetail(){_currentDetailId=null;document.getElementById('detailOverlay').classList.remove('open');document.body.style.overflow='';}
 function printDetail(){
 const panel=document.getElementById('detailPanel');
 const projName=panel.querySelector('.dp-name')?.textContent||'مشروع';
@@ -925,10 +957,10 @@ const safeLogo=escapeHtml(logoSrc);
 const safeSig=escapeHtml(sigSrc);
 const header='<div class="print-header"><img src="'+safeLogo+'" alt=""><div class="print-header-title">تقرير مشروع - '+safeName+'</div><div class="print-header-sig"><img src="'+safeSig+'" alt=""></div></div><div class="print-date">تاريخ الطباعة: '+escapeHtml(dateStr)+'</div>';
 const clone=panel.cloneNode(true);
+// إزالة أزرار قفل الإخفاء من نسخة الطباعة
+clone.querySelectorAll('.field-lock').forEach(el=>el.remove());
 // إزالة العناصر التي اختار المستخدم استثناءها من الطباعة
 clone.querySelectorAll('[data-pf]').forEach(el=>{const k=el.getAttribute('data-pf');if(_printDetailExcluded.has(k))el.remove();});
-clone.querySelectorAll('.dp-item,.date-item').forEach(el=>{if(el.textContent.includes('🔒'))el.remove();});
-clone.querySelectorAll('.dp-brief-box,.dp-notes-box,.dp-section').forEach(el=>{if(el.textContent.includes('🔒'))el.remove();});
 clone.querySelectorAll('.dp-section').forEach(el=>{const grid=el.querySelector('.dp-grid,.dates-strip');if(grid&&!grid.children.length)el.remove();else if(!grid&&!el.querySelector('.dp-item,.date-item,.dp-letters'))el.remove();});
 const printHtml='<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src * data:; style-src \'unsafe-inline\' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:;"><title>تقرير مشروع - '+safeName.replace(/[<>]/g,'')+'</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;600;700;800&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>'+header+clone.innerHTML+'</body></html>';
 const blob=new Blob([printHtml],{type:'text/html'});
