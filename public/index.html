@@ -488,18 +488,8 @@ window.doLogout=async function(){
 onAuthStateChanged(auth,async(user)=>{
   const loader=document.getElementById('authLoading');
   if(user){
-    // فحص: لا نسمح بالدخول إلا بحساب موثّق البريد (يمنع التسجيل الذاتي بحسابات وهمية)
-    // ملاحظة: providers بدون فكرة email verification (Google/Apple) تعتبر موثّقة تلقائياً
-    const isEmailProvider=user.providerData.some(p=>p.providerId==='password');
-    if(isEmailProvider&&!user.emailVerified){
-      try{await signOut(auth);}catch(e){}
-      const errEl=document.getElementById('loginError');
-      if(errEl)errEl.textContent='يجب التحقق من البريد الإلكتروني قبل الدخول';
-      document.getElementById('loginScreen').classList.remove('hidden');
-      document.body.classList.add('locked');
-      loader.classList.add('hidden');
-      return;
-    }
+    // ملاحظة: شرط توثيق البريد مُلغى لأن الحسابات تُنشأ يدوياً من الإدارة
+    // ولا يوجد تسجيل ذاتي في التطبيق
     // محاولة فتح فوري من الكاش (بصلاحيات viewer فقط للأمان - الصلاحيات الحقيقية تأتي من Firestore)
     const cachedUser=localStorage.getItem('cachedUser');
     const cachedProjects=localStorage.getItem('cachedProjects');

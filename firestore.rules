@@ -7,8 +7,9 @@ service cloud.firestore {
       return request.auth != null;
     }
     function isVerified() {
-      // Google/Apple يأتون موثّقين تلقائياً، Email/Password يجب أن يكون email_verified
-      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider != 'password');
+      // ملاحظة: شرط توثيق البريد مُلغى لأن الحسابات تُنشأ يدوياً من الإدارة
+      // ولا يوجد تسجيل ذاتي في التطبيق
+      return isSignedIn();
     }
     function isAdmin() {
       return isVerified() &&
