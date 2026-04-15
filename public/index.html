@@ -5,11 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
 <meta name="googlebot" content="noindex, nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.sheetjs.com https://www.gstatic.com https://apis.google.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-src 'self' https://*.firebaseapp.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.sheetjs.com https://www.gstatic.com https://apis.google.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; frame-src 'self' https://*.firebaseapp.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com wss://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none';">
 <link rel="icon" type="image/png" href="BB2.png">
 <link rel="apple-touch-icon" href="BB2.png">
 <link rel="manifest" href="manifest.json">
 <title>لوحة مشاريع بلدية بلقرن</title>
+<!--
+  ⚠️ TODO أمان: أضف integrity (SRI) لهذه السكربتات الخارجية وللسكربت السفلي xlsx.
+  جوّل الـ hash يدوياً عبر:
+    curl -sL <URL> | openssl dgst -sha384 -binary | openssl base64 -A
+  ثم أضف:  integrity="sha384-<HASH>" crossorigin="anonymous"
+  بدون SRI: اختراق CDN يمكنه حقن سكربتات على كل المستخدمين.
+-->
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js">
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js">
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js">
@@ -357,7 +364,7 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,setPersistence,browserSessionPersistence}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 import{getFirestore,collection,getDocs,doc,getDoc,setDoc,deleteDoc,writeBatch}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
 // ⚠️ ضع إعدادات Firebase الخاصة بمشروعك هنا
@@ -373,6 +380,8 @@ const firebaseConfig={
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
 const db=getFirestore(app);
+// جلسة محصورة بعمر التبويب — تختفي تلقائياً عند إغلاق النافذة
+setPersistence(auth,browserSessionPersistence).catch(()=>{});
 
 const ORNS = {
   tawq:'assets/ornaments/tawq.png',
@@ -407,8 +416,12 @@ async function loadHiddenFields(){
   try{const d=await getDoc(doc(db,'meta','hiddenFields'));if(d.exists())hiddenFields=d.data().fields||[];}catch(e){hiddenFields=[];}
 }
 async function saveHiddenFields(){
-  try{await setDoc(doc(db,'meta','hiddenFields'),{fields:hiddenFields});}catch(e){alert('خطأ في حفظ الإعدادات: '+e.message);}
+  try{await setDoc(doc(db,'meta','hiddenFields'),{fields:hiddenFields});}catch(e){console.error('saveHiddenFields',e);alert('تعذّر حفظ الإعدادات. تأكد من الاتصال والصلاحيات.');}
 }
+// ⚠️ تنبيه أمني: "إخفاء الحقول" هو إخفاء بصري على العميل فقط.
+// قواعد Firestore تسمح لأي مستخدم موثّق بقراءة الوثيقة كاملة.
+// للأمان الحقيقي: انقل الحقول الحساسة إلى مجموعة فرعية مقيّدة بالأدمن
+// أو استخدم Cloud Function كطبقة قراءة.
 function isFieldHidden(fieldKey){return hiddenFields.includes(fieldKey)&&(!currentUser||currentUser.role!=='admin');}
 
 // ─── تحميل المشاريع من Firestore ───
@@ -425,12 +438,17 @@ async function loadProjects(){
 window.doLogin=async function(){
   const email=document.getElementById('loginUser').value.trim();
   const pass=document.getElementById('loginPass').value;
-  if(!email||!pass){document.getElementById('loginError').textContent='يرجى إدخال البريد الإلكتروني وكلمة المرور';return;}
+  const err=document.getElementById('loginError');
+  if(!email||!pass){err.textContent='يرجى إدخال البريد الإلكتروني وكلمة المرور';return;}
+  // فحص مبدئي للبريد لتقليل ضربات السيرفر
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){err.textContent='صيغة البريد الإلكتروني غير صحيحة';return;}
   try{
-    document.getElementById('loginError').textContent='جاري تسجيل الدخول...';
+    err.textContent='جاري تسجيل الدخول...';
     await signInWithEmailAndPassword(auth,email,pass);
   }catch(e){
-    document.getElementById('loginError').textContent='البريد الإلكتروني أو كلمة المرور غير صحيحة';
+    // رسالة عامة دائماً — لا نكشف ما إذا كان البريد موجوداً
+    console.error('Login failed',e&&e.code);
+    err.textContent='البريد الإلكتروني أو كلمة المرور غير صحيحة';
   }
 };
 
@@ -470,6 +488,18 @@ window.doLogout=async function(){
 onAuthStateChanged(auth,async(user)=>{
   const loader=document.getElementById('authLoading');
   if(user){
+    // فحص: لا نسمح بالدخول إلا بحساب موثّق البريد (يمنع التسجيل الذاتي بحسابات وهمية)
+    // ملاحظة: providers بدون فكرة email verification (Google/Apple) تعتبر موثّقة تلقائياً
+    const isEmailProvider=user.providerData.some(p=>p.providerId==='password');
+    if(isEmailProvider&&!user.emailVerified){
+      try{await signOut(auth);}catch(e){}
+      const errEl=document.getElementById('loginError');
+      if(errEl)errEl.textContent='يجب التحقق من البريد الإلكتروني قبل الدخول';
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.body.classList.add('locked');
+      loader.classList.add('hidden');
+      return;
+    }
     // محاولة فتح فوري من الكاش (بصلاحيات viewer فقط للأمان - الصلاحيات الحقيقية تأتي من Firestore)
     const cachedUser=localStorage.getItem('cachedUser');
     const cachedProjects=localStorage.getItem('cachedProjects');
@@ -899,16 +929,21 @@ body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-
 @media print{body{padding:0;}}`;
 const sigSrc=document.querySelector('.sig-img')?.src||'assets/ornaments/developer_sig.png';
 const now=new Date();const dateStr=now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+(now.getHours()%12||12)+':'+(now.getMinutes()<10?'0':'')+now.getMinutes()+' '+(now.getHours()>=12?'م':'ص');
-const header='<div class="print-header"><img src="'+logoSrc+'" alt=""><div class="print-header-title">تقرير مشروع - '+projName.replace(/</g,'&lt;')+'</div><div class="print-header-sig"><img src="'+sigSrc+'" alt=""></div></div><div class="print-date">تاريخ الطباعة: '+dateStr+'</div>';
-const w=window.open('','_blank');
+const safeName=escapeHtml(projName);
+const safeLogo=escapeHtml(logoSrc);
+const safeSig=escapeHtml(sigSrc);
+const header='<div class="print-header"><img src="'+safeLogo+'" alt=""><div class="print-header-title">تقرير مشروع - '+safeName+'</div><div class="print-header-sig"><img src="'+safeSig+'" alt=""></div></div><div class="print-date">تاريخ الطباعة: '+escapeHtml(dateStr)+'</div>';
 const clone=panel.cloneNode(true);clone.querySelectorAll('.dp-item,.date-item').forEach(el=>{if(el.textContent.includes('🔒'))el.remove();});clone.querySelectorAll('.dp-brief-box,.dp-notes-box,.dp-section').forEach(el=>{if(el.textContent.includes('🔒'))el.remove();});clone.querySelectorAll('.dp-section').forEach(el=>{const grid=el.querySelector('.dp-grid,.dates-strip');if(grid&&!grid.children.length)el.remove();else if(!grid&&!el.querySelector('.dp-item,.date-item,.dp-letters'))el.remove();});
-w.document.write('<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>تقرير مشروع - '+projName.replace(/</g,'')+'</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;600;700;800&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>'+header+clone.innerHTML+'</body></html>');
-w.document.close();setTimeout(()=>{w.print();w.close();},700);}
+const printHtml='<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src * data:; style-src \'unsafe-inline\' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:;"><title>تقرير مشروع - '+safeName.replace(/[<>]/g,'')+'</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;600;700;800&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>'+header+clone.innerHTML+'</body></html>';
+const blob=new Blob([printHtml],{type:'text/html'});
+const url=URL.createObjectURL(blob);
+const w=window.open(url,'_blank');
+setTimeout(()=>{try{w.print();}catch(e){}setTimeout(()=>{try{w.close();}catch(e){}URL.revokeObjectURL(url);},500);},800);}
 window.printDetail=printDetail;
 
 const PRINT_COLS=[
 {key:'name',label:'اسم المشروع',get:p=>p.name||'',style:'font-weight:700;',on:true},
-{key:'status',label:'الحالة',get:p=>`<span style="color:${COLORS[p.status]||'#333'};font-weight:700;">${LABELS[p.status]||''}</span>`,style:'',on:true},
+{key:'status',label:'الحالة',get:p=>`<span style="color:${COLORS[p.status]||'#333'};font-weight:700;">${escapeHtml(LABELS[p.status]||'')}</span>`,style:'',on:true,safe:true},
 {key:'contractor',label:'المقاول',get:p=>p.contractor||'',style:'',on:true},
 {key:'progress',label:'نسبة الإنجاز',get:p=>(Number.isInteger(p.progress)?p.progress:p.progress.toFixed(2))+'%',style:'text-align:center;font-weight:700;',on:true},
 {key:'value_num',label:'القيمة التعاقدية',get:p=>p.value_num?p.value_num.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'',style:'text-align:left;',on:true},
@@ -1017,8 +1052,8 @@ function openPrintSettings(){
         ${filtered.map(p=>`
           <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--glass);border:1px solid var(--gborder);border-radius:8px;font-size:11px;font-weight:600;color:var(--text);cursor:pointer;">
             <input type="checkbox" ${!_excludedProjects[p.id]?'checked':''} onchange="togglePrintProject(${p.id},this.checked)" style="width:14px;height:14px;accent-color:var(--advanced);cursor:pointer;">
-            <span style="flex:1">${p.name}</span>
-            <span style="font-size:9px;color:${COLORS[p.status]};font-weight:700;">${LABELS[p.status]}</span>
+            <span style="flex:1">${escapeHtml(p.name)}</span>
+            <span style="font-size:9px;color:${COLORS[p.status]};font-weight:700;">${escapeHtml(LABELS[p.status]||'')}</span>
           </label>
         `).join('')}
       </div>
@@ -1074,7 +1109,7 @@ const kpiHtml=`<div class="kpi-grid">
 ${Object.entries(cnt).filter(([,v])=>v>0).map(([s,v])=>`<div class="kpi-box" style="border-top:3px solid ${COLORS[s]};"><div class="kv" style="color:${COLORS[s]}">${v}</div><div class="kl">${LABELS[s]}</div></div>`).join('')}
 <div class="kpi-box" style="border-top:3px solid #887973;"><div class="kv" style="font-size:12px;">${totalVal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div><div class="kl">إجمالي قيم العقود (ريال)</div></div>
 </div>`;
-const tableRows=filtered.map((p,i)=>`<tr><td>${i+1}</td>${activeCols.map(c=>`<td style="${c.style}">${c.get(p)}</td>`).join('')}</tr>`).join('');
+const tableRows=filtered.map((p,i)=>`<tr><td>${i+1}</td>${activeCols.map(c=>{const v=c.get(p);return `<td style="${c.style}">${c.safe?v:escapeHtml(v)}</td>`;}).join('')}</tr>`).join('');
 const css=`*{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:"IBM Plex Sans Arabic",sans-serif;padding:0;color:#392015;font-size:10px;line-height:1.4;direction:rtl;background:#fff;}
 .print-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:3px solid #392015;}
@@ -1102,7 +1137,7 @@ const html=`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
 <div class="print-date">تاريخ الطباعة: ${dateStr}</div>
 ${kpiHtml}
 <div class="filter-label">${filterLabel} (${filtered.length})</div>
-<table><thead><tr><th>#</th>${activeCols.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead>
+<table><thead><tr><th>#</th>${activeCols.map(c=>`<th>${escapeHtml(c.label)}</th>`).join('')}</tr></thead>
 <tbody>${tableRows}</tbody></table>
 </body></html>`;
 const w=window.open('','_blank');w.document.write(html);w.document.close();
@@ -1361,7 +1396,7 @@ async function saveProject(id){
   p.contractor_rank=v('contractor_rank');
   p.letters=v('letters');
   p.notes=v('notes');
-  try{await setDoc(doc(db,'projects',String(p.id)),{...p});}catch(e){alert('خطأ في الحفظ: '+e.message);_busy=false;return;}
+  try{await setDoc(doc(db,'projects',String(p.id)),{...p});}catch(e){console.error('saveProject',e);alert('تعذّر حفظ المشروع. تحقق من الاتصال والصلاحيات.');_busy=false;return;}
   updateLastModified();
   renderAll();
   openDetail(id);
@@ -1370,9 +1405,12 @@ async function saveProject(id){
 
 async function addNewProject(){
   const newId=projects.length?Math.max(...projects.map(p=>p.id))+1:1;
-  const np={id:newId,name:'',status:'pending',status_raw:'قيد الترسية',phase:'',progress:0,value:'0',value_num:0,contractor:'',supervisor:'',consultant:'',consultant_phone:'',pm:'',pm_email:'',pm_phone:'',category:'',budget_door:'',contract_no:'',project_no:'',duration_days:0,duration_after_ext:0,ext1:'',ext2:'',ext3:'',stops:0,date_sign:'',date_site:'',date_end:'',date_end_adj:'',date_receive_primary:'',date_receive_primary_adj:'',date_receive_final:'',date_updated:new Date().toISOString().slice(0,10),last_action:'',notes:'',letters:'',vision_linked:'',initiative:'',tax_pct:0,increase_pct:0,contractor_engineer:'',contractor_email:'',contractor_phone:'',contractor_rank:'',scope:'',description:'',sector:'',municipality:'',status_mashroat:'',is_bidding:'',elapsed_pct:0,elapsed_ext_pct:0,delay_pct:0,correction_days:0,is_stopped:'',is_received_primary:''};
+  // اسم مبدئي غير فارغ ليتوافق مع قاعدة Firestore (name.size() > 0)
+  // المستخدم سيستبدله مباشرة في شاشة التعديل
+  const np={id:newId,name:'مشروع جديد',status:'pending',status_raw:'قيد الترسية',phase:'',progress:0,value:'0',value_num:0,contractor:'',supervisor:'',consultant:'',consultant_phone:'',pm:'',pm_email:'',pm_phone:'',category:'',budget_door:'',contract_no:'',project_no:'',duration_days:0,duration_after_ext:0,ext1:'',ext2:'',ext3:'',stops:0,date_sign:'',date_site:'',date_end:'',date_end_adj:'',date_receive_primary:'',date_receive_primary_adj:'',date_receive_final:'',date_updated:new Date().toISOString().slice(0,10),last_action:'',notes:'',letters:'',vision_linked:'',initiative:'',tax_pct:0,increase_pct:0,contractor_engineer:'',contractor_email:'',contractor_phone:'',contractor_rank:'',scope:'',description:'',sector:'',municipality:'',status_mashroat:'',is_bidding:'',elapsed_pct:0,elapsed_ext_pct:0,delay_pct:0,correction_days:0,is_stopped:'',is_received_primary:''};
   projects.push(np);
-  try{await setDoc(doc(db,'projects',String(newId)),{...np});}catch(e){}
+  try{await setDoc(doc(db,'projects',String(newId)),{...np});}
+  catch(e){console.error('addNewProject',e);alert('تعذّر إنشاء المشروع. تحقق من الاتصال والصلاحيات.');projects.pop();return;}
   const overlay=document.getElementById('detailOverlay');
   overlay.classList.add('open');
   document.body.style.overflow='hidden';
@@ -1385,7 +1423,7 @@ async function deleteProject(id){
   const p=projects.find(x=>x.id===id);
   if(!p)return;
   if(!confirm('هل أنت متأكد من حذف المشروع:\n'+escapeHtml(p.name)+'؟'))return;
-  try{await deleteDoc(doc(db,'projects',String(id)));}catch(e){alert('خطأ في الحذف: '+e.message);return;}
+  try{await deleteDoc(doc(db,'projects',String(id)));}catch(e){console.error('deleteProject',e);alert('تعذّر حذف المشروع. تحقق من الاتصال والصلاحيات.');return;}
   projects=projects.filter(x=>x.id!==id);
   updateLastModified();
   closeDetail();
@@ -1400,10 +1438,24 @@ function importExcel(input){
   if(_busy)return;
   const file=input.files[0]; if(!file) return;
   if(file.size>5*1024*1024){alert('حجم الملف كبير جداً (الحد الأقصى 5 ميجابايت)');input.value='';return;}
+  // التحقق من امتداد الملف
+  const validExt=/\.(xlsx|xls|csv)$/i.test(file.name);
+  if(!validExt){alert('نوع الملف غير مدعوم. الرجاء استخدام xlsx أو xls أو csv');input.value='';return;}
   _busy=true;
   const reader=new FileReader();
   reader.onload=async function(e){
-    const wb=XLSX.read(e.target.result,{type:'array'});
+    // التحقق من magic bytes لتجنّب الملفات المتنكرة
+    const buf=new Uint8Array(e.target.result);
+    const isXlsx=buf.length>3&&buf[0]===0x50&&buf[1]===0x4B&&(buf[2]===0x03||buf[2]===0x05||buf[2]===0x07); // ZIP/PK
+    const isXls=buf.length>7&&buf[0]===0xD0&&buf[1]===0xCF&&buf[2]===0x11&&buf[3]===0xE0; // OLE2
+    const lowerName=file.name.toLowerCase();
+    const isCsv=lowerName.endsWith('.csv');
+    if(!isXlsx&&!isXls&&!isCsv){
+      alert('محتوى الملف لا يتطابق مع نوع xlsx/xls/csv صالح');_busy=false;input.value='';return;
+    }
+    let wb;
+    try{wb=XLSX.read(e.target.result,{type:'array'});}
+    catch(err){console.error('xlsx parse',err);alert('تعذّر قراءة الملف. تأكد من صحته.');_busy=false;input.value='';return;}
     const ws=wb.Sheets[wb.SheetNames[0]];
     const rows=XLSX.utils.sheet_to_json(ws);
     if(!rows.length){alert('الملف فارغ');_busy=false; return;}
@@ -1547,6 +1599,14 @@ function importExcel(input){
     if(!added.length&&!removed.length&&!modified.length)summary+='لا توجد تغييرات ملحوظة.\n';
     summary+='\n═══════════════════\nهل تريد المتابعة واستبدال جميع البيانات؟';
     if(!confirm(summary)){_busy=false;return;}
+    // ─── نسخة احتياطية محلية قبل الكتابة (في localStorage) — يمكن استرجاعها يدوياً ───
+    try{
+      const backupKey='projectsBackup_'+new Date().toISOString().replace(/[:.]/g,'-');
+      localStorage.setItem(backupKey,JSON.stringify({savedAt:new Date().toISOString(),projects}));
+      // الاحتفاظ بآخر 5 نسخ احتياطية فقط
+      const allKeys=Object.keys(localStorage).filter(k=>k.startsWith('projectsBackup_')).sort();
+      while(allKeys.length>5){const oldest=allKeys.shift();localStorage.removeItem(oldest);}
+    }catch(e){console.warn('local backup failed',e);}
     try{
       const oldSnap=await getDocs(collection(db,'projects'));
       const delBatch=writeBatch(db);
@@ -1555,7 +1615,7 @@ function importExcel(input){
       const batch=writeBatch(db);
       parsed.forEach(p=>batch.set(doc(db,'projects',String(p.id)),{...p}));
       await batch.commit();
-    }catch(e){alert('خطأ في حفظ البيانات: '+e.message);_busy=false;return;}
+    }catch(e){console.error('importExcel-write',e);alert('تعذّر حفظ البيانات المستوردة. لم يتم تطبيق أي تغيير. تحقق من الاتصال والصلاحيات.');_busy=false;return;}
     projects=parsed;
     filter='all';
     updateLastModified();
@@ -1713,6 +1773,9 @@ function openFieldsManager(){
       <div class="dp-head-actions"><button class="btn-close" onclick="closeDetail()">&#x2715;</button></div>
     </div>
     <div class="dp-body">
+      <div style="background:var(--stalledt);border:1px solid var(--stalled);border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:var(--stalled);font-weight:700;line-height:1.6;">
+        &#9888; ملاحظة أمنية: هذا الإخفاء جمالي فقط لتنظيف العرض. أي مستخدم تقني يستطيع قراءة كامل البيانات من المتصفح. لا تضع هنا حقولاً تعتبرها سرية.
+      </div>
       <div style="display:flex;flex-direction:column;gap:6px;">
         ${ALL_FIELD_LABELS.map(f=>`
           <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--glass);border:1px solid var(--gborder);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text);">

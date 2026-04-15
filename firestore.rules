@@ -1,24 +1,73 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // المستخدمون - قراءة للمستخدم نفسه، تعديل حقل الثيم فقط
+
+    // ─── دوال مساعدة ───
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isVerified() {
+      // Google/Apple يأتون موثّقين تلقائياً، Email/Password يجب أن يكون email_verified
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider != 'password');
+    }
+    function isAdmin() {
+      return isVerified() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    function validStatus(s) {
+      return s in ['advanced','regular','pending','stopped','late','stalled','preceipt'];
+    }
+    function isStringOrMissing(v) {
+      return v == null || v is string;
+    }
+    function isNumberOrMissing(v) {
+      return v == null || v is number;
+    }
+
+    // ─── المستخدمون ───
+    // قراءة وثيقة المستخدم الخاصة بنفسه فقط
+    // التعديل محدود بحقلين: theme و printSettings مع تحقق من النوع والحجم
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['theme','printSettings']);
+      allow read: if isVerified() && request.auth.uid == userId;
+      allow update: if isVerified() && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['theme','printSettings'])
+        && (!('theme' in request.resource.data) || (request.resource.data.theme is string && request.resource.data.theme in ['light','dark']))
+        && (!('printSettings' in request.resource.data) || (request.resource.data.printSettings is map && request.resource.data.printSettings.size() < 200));
+      // إنشاء وحذف يتمان من الإدارة فقط (Firebase Console أو Admin SDK) — لا من العميل
       allow create, delete: if false;
     }
-    // المشاريع - قراءة لأي مستخدم مسجل، كتابة للأدمن فقط
+
+    // ─── المشاريع ───
+    // قراءة: لأي مستخدم موثّق
+    // كتابة: للأدمن فقط مع تحقق من بنية البيانات
     match /projects/{projectId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow read: if isVerified();
+
+      allow delete: if isAdmin();
+
+      // التحقق من الحقول الجوهرية فقط — حقول النصوص الحرة (phase, contractor, ...)
+      // قد تأتي من Excel كأرقام أحياناً، فلا نشددها هنا. الحماية الجوهرية:
+      // (1) عدد الحقول محدود (2) اسم نصي وغير فارغ (3) status من القائمة المسموحة
+      // (4) progress و value_num أرقام في نطاق منطقي
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().size() < 200
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() < 500
+        && validStatus(request.resource.data.status)
+        && (!('progress' in request.resource.data) || (request.resource.data.progress is number && request.resource.data.progress >= 0 && request.resource.data.progress <= 100))
+        && (!('value_num' in request.resource.data) || (request.resource.data.value_num is number && request.resource.data.value_num >= 0));
     }
-    // بيانات وصفية - آخر تحديث
+
+    // ─── بيانات وصفية ───
+    // hiddenFields: قائمة نصوص (ميزة UI فقط — ليست أمناً حقيقياً)
+    // lastUpdate: ختم زمني نصي
     match /meta/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow read: if isVerified();
+      allow write: if isAdmin()
+        && request.resource.data.keys().size() < 20
+        && (!('fields' in request.resource.data) || (request.resource.data.fields is list && request.resource.data.fields.size() < 200))
+        && (!('timestamp' in request.resource.data) || request.resource.data.timestamp is string);
     }
   }
 }
