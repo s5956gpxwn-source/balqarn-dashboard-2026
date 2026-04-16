@@ -1466,6 +1466,7 @@ async function closeDetail(){
     if(!ok)return;
   }
   _editDirty=false;
+  _clearDraftTimer();
   _currentDetailId=null;
   document.getElementById('detailOverlay').classList.remove('open');
   document.body.style.overflow='';
@@ -2030,12 +2031,78 @@ function editProject(id){
       <div id="editErrorBox" style="display:none;margin-top:8px;padding:10px 14px;background:var(--stalledt);border:1px solid var(--stalled);border-radius:8px;color:var(--stalled);font-size:12px;font-weight:700;"></div>
     </div>`;
   panel.scrollTop=0;
-  // تتبّع التغييرات غير المحفوظة
+  // تتبّع التغييرات غير المحفوظة + auto-save للمسودة
   _editDirty=false;
+  _clearDraftTimer();
   const form=document.querySelector('.dp-body');
   if(form){
-    form.addEventListener('input',()=>{_editDirty=true;},{once:true,capture:true});
-    form.addEventListener('change',()=>{_editDirty=true;},{once:true,capture:true});
+    const onChange=()=>{_editDirty=true;};
+    form.addEventListener('input',onChange,{capture:true});
+    form.addEventListener('change',onChange,{capture:true});
+  }
+  // استعادة مسودة موجودة
+  _tryRestoreDraft(id);
+  // تشغيل auto-save (كل 10 ثواني)
+  _startDraftTimer(id);
+}
+
+// ─── Auto-save للمسودات ───
+const _DRAFT_PREFIX='projectDraft_';
+const _DRAFT_INTERVAL=10000; // 10 ثواني
+let _draftTimer=null;
+function _clearDraftTimer(){if(_draftTimer){clearInterval(_draftTimer);_draftTimer=null;}}
+function _startDraftTimer(id){
+  _clearDraftTimer();
+  _draftTimer=setInterval(()=>{if(_editDirty)_saveDraft(id);},_DRAFT_INTERVAL);
+}
+function _collectEditValues(){
+  const data={};
+  document.querySelectorAll('[id^="edit_"]').forEach(el=>{
+    const key=el.id.replace(/^edit_/,'');
+    data[key]=el.value;
+  });
+  return data;
+}
+function _saveDraft(id){
+  try{
+    const data=_collectEditValues();
+    if(!Object.keys(data).length)return;
+    localStorage.setItem(_DRAFT_PREFIX+id,JSON.stringify({savedAt:new Date().toISOString(),data}));
+    _showDraftStatus('محفوظ تلقائياً');
+  }catch(e){console.warn('saveDraft',e);}
+}
+function _showDraftStatus(text){
+  let el=document.getElementById('draftStatus');
+  if(!el){
+    el=document.createElement('div');el.id='draftStatus';
+    el.style.cssText='position:absolute;top:12px;left:60px;font-size:10px;color:var(--text3);font-weight:700;opacity:0;transition:opacity .2s;pointer-events:none;';
+    const head=document.querySelector('.dp-head');if(head)head.appendChild(el);
+  }
+  el.textContent='&#10003; '+text;
+  el.innerHTML='&#10003; '+text;
+  el.style.opacity='1';
+  clearTimeout(el._hideT);
+  el._hideT=setTimeout(()=>{el.style.opacity='0';},2500);
+}
+function _clearDraft(id){try{localStorage.removeItem(_DRAFT_PREFIX+id);}catch(e){}}
+async function _tryRestoreDraft(id){
+  let raw;try{raw=localStorage.getItem(_DRAFT_PREFIX+id);}catch(e){return;}
+  if(!raw)return;
+  let draft;try{draft=JSON.parse(raw);}catch(e){_clearDraft(id);return;}
+  if(!draft||!draft.data)return;
+  // تجاهل المسودات الأقدم من 7 أيام
+  const ageMs=Date.now()-new Date(draft.savedAt).getTime();
+  if(ageMs>7*86400000){_clearDraft(id);return;}
+  const ok=await showConfirm('يوجد مسودة غير محفوظة لهذا المشروع من:\n'+formatDateTime(draft.savedAt)+'\n\nهل تريد استعادتها؟',{title:'مسودة محفوظة',okLabel:'استعادة',cancelLabel:'تجاهل وحذف'});
+  if(ok){
+    Object.entries(draft.data).forEach(([k,v])=>{
+      const el=document.getElementById('edit_'+k);
+      if(el)el.value=v;
+    });
+    _editDirty=true;
+    _showDraftStatus('تم استعادة المسودة');
+  }else{
+    _clearDraft(id);
   }
 }
 
@@ -2046,6 +2113,7 @@ async function cancelEdit(id){
     if(!ok)return;
   }
   _editDirty=false;
+  _clearDraft(id);_clearDraftTimer();
   openDetail(id);
 }
 window.cancelEdit=cancelEdit;
@@ -2182,6 +2250,7 @@ async function saveProject(id){
   p.notes=v('notes');
   try{await setDoc(doc(db,'projects',String(p.id)),{...p});}catch(e){console.error('saveProject',e);showAlert('تعذّر حفظ المشروع. تحقق من الاتصال والصلاحيات.');_restore();return;}
   _editDirty=false;
+  _clearDraft(id);_clearDraftTimer();
   updateLastModified();
   renderAll();
   openDetail(id);
