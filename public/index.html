@@ -5,10 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
 <meta name="googlebot" content="noindex, nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.sheetjs.com https://www.gstatic.com https://apis.google.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; frame-src 'self' https://*.firebaseapp.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com wss://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.sheetjs.com https://www.gstatic.com https://apis.google.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; frame-src 'self' https://*.firebaseapp.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com wss://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com; worker-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none';">
 <link rel="icon" type="image/png" href="BB2.png">
 <link rel="apple-touch-icon" href="BB2.png">
 <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#392015">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="مشاريع بلقرن">
 <title>لوحة مشاريع بلدية بلقرن</title>
 <!--
   ⚠️ TODO أمان: أضف integrity (SRI) لهذه السكربتات الخارجية وللسكربت السفلي xlsx.
@@ -265,6 +269,9 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 .mx-btn.danger:hover{opacity:.9;}
 .mx-input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--gborder2);background:var(--glass);color:var(--text);font-family:inherit;font-size:13px;font-weight:600;margin-top:8px;outline:none;}
 .mx-input:focus{border-color:var(--advanced);}
+.sw-update-bar{position:fixed;bottom:20px;left:20px;background:var(--advanced);color:#fff;padding:10px 16px;border-radius:12px;font-size:12px;font-weight:800;z-index:10000;display:flex;align-items:center;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,.2);opacity:0;transform:translateY(20px);transition:all .25s;pointer-events:none;}
+.sw-update-bar.show{opacity:1;transform:translateY(0);pointer-events:all;}
+.sw-update-bar button{background:#fff;color:var(--advanced);border:none;padding:6px 14px;border-radius:8px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;}
 .skel{background:linear-gradient(90deg,var(--gborder) 0%,var(--glass2) 50%,var(--gborder) 100%);background-size:200% 100%;animation:skel-shimmer 1.4s linear infinite;border-radius:8px;}
 @keyframes skel-shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
 .skel-wrap{padding:20px 28px 0;max-width:1440px;margin:0 auto;}
@@ -291,6 +298,10 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 </style>
 </head>
 <body class="light locked">
+<div class="sw-update-bar" id="swUpdateBar" role="status" aria-live="polite">
+  <span>&#10024; إصدار جديد متاح</span>
+  <button type="button">تحديث الآن</button>
+</div>
 <div class="auth-loading" id="authLoading"><div class="auth-loading-spinner"></div></div>
 <div class="app-skeleton hidden" id="appSkeleton" aria-hidden="true">
   <div class="skel-wrap">
@@ -2406,6 +2417,31 @@ function applyThemeAssets(){
 // الافتراضي دائماً فاتح - الثيم يتغير فقط بعد تسجيل الدخول حسب تفضيل المستخدم
 applyThemeAssets();
 window.toggleTheme=toggleTheme;
+
+// ─── تسجيل Service Worker (PWA + offline + تحميل أسرع) ───
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('/sw.js').then(reg=>{
+      // رصد التحديثات
+      reg.addEventListener('updatefound',()=>{
+        const nw=reg.installing;
+        if(!nw)return;
+        nw.addEventListener('statechange',()=>{
+          if(nw.state==='installed'&&navigator.serviceWorker.controller){
+            // إصدار جديد جاهز — اعرض شريط تحديث
+            const bar=document.getElementById('swUpdateBar');
+            if(bar){bar.classList.add('show');bar.querySelector('button').onclick=()=>{nw.postMessage({type:'SKIP_WAITING'});window.location.reload();};}
+          }
+        });
+      });
+    }).catch(e=>{console.warn('SW register failed',e);});
+    // تحديث الصفحة لو تغيّر controller
+    let refreshing=false;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(refreshing)return;refreshing=true;window.location.reload();
+    });
+  });
+}
 
 // ─── Deep links: فتح مشروع من URL ?project=ID ───
 let _deepLinkHandled=false;
