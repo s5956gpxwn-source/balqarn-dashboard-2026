@@ -413,7 +413,11 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
   <div class="charts-row">
     <div class="chart-card" style="position:relative">
       <img class="chart-orn" id="chartOrn1" alt="">
-      <div class="chart-title">حالة المشاريع <button type="button" class="chart-dl-btn" onclick="exportChart('donut','حالة_المشاريع')" title="تصدير كصورة PNG">&#11123;</button></div>
+      <div class="chart-title">حالة المشاريع</div>
+      <!-- زر تصدير الصور PNG موقوف مؤقتاً — الكود في exportChart() لا يزال موجوداً، لإعادة التفعيل:
+           أضف داخل chart-title:
+           <button type="button" class="chart-dl-btn" onclick="exportChart('donut','حالة_المشاريع')" title="تصدير كصورة PNG">&#11123;</button>
+      -->
       <div class="donut-wrap">
         <div class="donut-container" id="donutContainer" style="position:relative;width:130px;height:130px;flex-shrink:0;overflow:visible;">
           <svg class="donut" width="130" height="130" viewBox="0 0 180 180" id="donutSvg"></svg>
@@ -465,11 +469,15 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
     <button class="fbtn sort-btn" onclick="setSort('value_num',this)">القيمة</button>
     <button class="fbtn sort-btn" onclick="setSort('progress',this)">الإنجاز</button>
     <button class="fbtn sort-btn" onclick="setSort('date_end',this)">التاريخ</button>
+    <!-- عروض "جدول زمني" و "اتجاهات" موقوفة مؤقتاً — الكود في renderTimeline()
+         و renderTrends() لا يزال موجوداً. لإعادة التفعيل، استبدل هذا الـ div
+         بالكود المُعلَّق أدناه:
     <div style="flex:1"></div>
     <span style="font-size:11px;font-weight:800;color:var(--text3);white-space:nowrap;">العرض:</span>
     <button class="fbtn view-btn active" data-view="grid" onclick="setView('grid',this)">&#9783; شبكة</button>
     <button class="fbtn view-btn" data-view="timeline" onclick="setView('timeline',this)">&#8757; جدول زمني</button>
     <button class="fbtn view-btn" data-view="trends" onclick="setView('trends',this)">&#128200; اتجاهات</button>
+    -->
   </div>
   <div class="proj-grid" id="projGrid"></div>
   <div class="timeline-view" id="timelineView" style="display:none"></div>
