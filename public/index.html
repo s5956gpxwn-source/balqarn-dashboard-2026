@@ -89,12 +89,6 @@ svg.donut{flex-shrink:0;transform:rotate(-90deg);}
 .bar-track{flex:1;height:18px;background:var(--glass);border-radius:6px;overflow:hidden;position:relative;}
 .bar-fill{height:100%;border-radius:6px;transition:width .8s ease;min-width:2px;}
 .bar-pct{font-size:11px;font-weight:800;color:var(--text2);min-width:36px;text-align:left;}
-.budget-rows{display:flex;flex-direction:column;gap:8px;}
-.budget-row{display:flex;flex-direction:column;gap:2px;}
-.budget-key{font-size:10px;color:var(--text3);font-weight:700;}
-.budget-val{font-size:14px;font-weight:900;color:var(--text);}
-.budget-sub{font-size:11px;color:var(--text2);font-weight:600;}
-.budget-divider{height:1px;background:var(--gborder);margin:4px 0;}
 .orn-div{display:flex;align-items:center;gap:10px;margin:14px 0;}
 .orn-div-line{flex:1;height:1px;background:var(--gborder);}
 .orn-icon{width:22px;height:22px;object-fit:contain;opacity:.22;flex-shrink:0;}
@@ -126,7 +120,7 @@ body.dark .orn-bar img{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 .card-stripe{position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0;}
 .s-advanced{background:var(--advanced);}.s-regular{background:var(--regular);}.s-pending{background:var(--pending);}.s-stopped{background:var(--stopped);}.s-late{background:var(--late);}.s-stalled{background:var(--stalled);}.s-preceipt{background:var(--preceipt);}
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
-.card-name{font-size:13px;font-weight:800;color:var(--text);line-height:1.4;flex:1;margin-left:10px;}
+.card-name{font-size:13px;font-weight:800;color:var(--text);line-height:1.4;flex:1;margin-left:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;word-break:break-word;}
 .sbadge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0;white-space:nowrap;}
 .b-advanced{background:var(--advancedt);color:var(--advanced);border:1px solid rgba(0,123,105,.22);}
 .b-regular{background:var(--regulart);color:var(--regular);border:1px solid rgba(102,176,165,.22);}
@@ -138,7 +132,7 @@ body.dark .orn-bar img{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 .card-meta{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
 .mrow{display:flex;align-items:center;justify-content:space-between;}
 .mkey{font-size:10px;color:var(--text4);}
-.mval{font-size:11px;color:var(--text2);font-weight:600;}
+.mval{font-size:11px;color:var(--text2);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;}
 .mval.big{font-size:13px;color:var(--text);font-weight:800;}
 .prog-hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
 .prog-lbl{font-size:10px;color:var(--text4);}
@@ -331,11 +325,6 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
       <img class="chart-orn" id="chartOrn2" alt="">
       <div class="chart-title">نسب الانجاز</div>
       <div class="bar-wrap" id="barWrap"></div>
-    </div>
-    <div class="chart-card" id="budgetCard" style="display:none">
-      <img class="chart-orn" id="chartOrn3" alt="">
-      <div class="chart-title">الميزانية الاجمالية</div>
-      <div class="budget-rows" id="budgetRows"></div>
     </div>
   </div>
   <div class="orn-div">
@@ -573,7 +562,6 @@ document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='
 
 document.getElementById('chartOrn1').src=ORNS['qit'];
 document.getElementById('chartOrn2').src=ORNS['jabal'];
-document.getElementById('chartOrn3').src=ORNS['shajara'];
 
 // تعيين زخارف صفحة الدخول + footer
 (function(){
@@ -604,7 +592,7 @@ function updateFilterCounts(){
   projects.forEach(p=>{if(cnt.hasOwnProperty(p.status))cnt[p.status]++;});
   document.querySelectorAll('.f-count').forEach(el=>{const k=el.getAttribute('data-count');if(cnt.hasOwnProperty(k))el.textContent=cnt[k];});
 }
-function renderAll(){try{renderKPI();}catch(e){}try{renderAlert();}catch(e){}try{renderDonut();}catch(e){}try{renderBars();}catch(e){}try{renderBudget();}catch(e){}try{renderGrid();}catch(e){}try{updateFilterCounts();}catch(e){}showLastUpdate(localStorage.getItem('lastUpdate'));}
+function renderAll(){try{renderKPI();}catch(e){}try{renderAlert();}catch(e){}try{renderDonut();}catch(e){}try{renderBars();}catch(e){}try{renderGrid();}catch(e){}try{updateFilterCounts();}catch(e){}showLastUpdate(localStorage.getItem('lastUpdate'));}
 
 function renderKPI(){
   const total=projects.length;
@@ -727,23 +715,6 @@ function renderBars(){
     :`<div style="color:var(--text4);font-size:12px;margin:auto">لا توجد مشاريع ${filter!=='all'?LABELS[filter]||'':''}${filter!=='all'?' حالياً':''}</div>`;
 }
 
-function renderBudget(){
-  const total=projects.reduce((a,p)=>a+p.value_num,0);
-  const byStatus={advanced:0,regular:0,pending:0,stopped:0,late:0,stalled:0,preceipt:0};
-  projects.forEach(p=>{if(byStatus.hasOwnProperty(p.status))byStatus[p.status]+=p.value_num;});
-  document.getElementById('budgetRows').innerHTML=`
-    <div class="budget-row">
-      <div class="budget-key">الاجمالي</div>
-      <div class="budget-val">${fmt(total)}</div>
-    </div>
-    <div class="budget-divider"></div>
-    ${Object.entries(byStatus).filter(([,v])=>v>0).map(([s,v])=>`
-      <div class="budget-row">
-        <div class="budget-key" style="color:${COLORS[s]}">${LABELS[s]}</div>
-        <div class="budget-sub">${fmt(v)}</div>
-      </div>`).join('')}
-  `;
-}
 
 let _searchTimer=null;
 function handleSearch(q){
@@ -771,13 +742,13 @@ function renderGrid(){
           <div class="card-stripe s-${p.status}"></div>
           <img class="card-orn" loading="lazy" src="${orn}" alt="">
           <div class="card-top">
-            <div class="card-name">${escapeHtml(p.name)}</div>
+            <div class="card-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</div>
             <span class="sbadge b-${p.status}">${escapeHtml(LABELS[p.status])}</span>
           </div>
           <div class="card-meta">
-            ${p.contractor?`<div class="mrow"><span class="mkey">المقاول</span><span class="mval">${escapeHtml(p.contractor)}</span></div>`:''}
+            ${p.contractor?`<div class="mrow"><span class="mkey">المقاول</span><span class="mval" title="${escapeHtml(p.contractor)}">${escapeHtml(p.contractor)}</span></div>`:''}
             <div class="mrow"><span class="mkey">القيمة التعاقدية</span><span class="mval big">${fmt(p.value_num)}</span></div>
-            <div class="mrow"><span class="mkey">التصنيف</span><span class="mval">${escapeHtml(p.category)}</span></div>
+            <div class="mrow"><span class="mkey">التصنيف</span><span class="mval" title="${escapeHtml(p.category)}">${escapeHtml(p.category)}</span></div>
             ${p.date_end?`<div class="mrow"><span class="mkey">انتهاء العقد</span><span class="mval">${p.date_end}</span></div>`:''}
           </div>
           <div class="prog-hdr">
@@ -1394,12 +1365,33 @@ setTimeout(()=>{w.print();w.close();},700);}
 window.printDashboard=printDashboard;
 document.getElementById('detailOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDetail();});
 
+// تحويل أي صيغة تاريخ للصيغة القياسية YYYY-MM-DD التي يقبلها <input type="date">
+function _toIsoDate(v){
+  if(!v)return '';
+  const s=String(v).trim();
+  // بالفعل ISO
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  // صيغ شائعة: YYYY/MM/DD أو DD/MM/YYYY أو DD-MM-YYYY
+  let m=s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if(m)return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
+  m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(m)return m[3]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0');
+  // Excel serial
+  const n=Number(s);
+  if(!isNaN(n)&&n>20000&&n<80000){const d=new Date((n-25569)*86400000);if(!isNaN(d))return d.toISOString().slice(0,10);}
+  return s; // غير قابل للتحويل — استخدمه كنص
+}
+
 function editField(label,field,val,type){
   val=val||'';
   if(type==='textarea') return `<div class="dp-form-group dp-item full"><label class="dp-form-label">${escapeHtml(label)}</label><textarea class="dp-form-textarea" id="edit_${field}">${escapeHtml(val)}</textarea></div>`;
   if(type==='select-status'){
     const opts=Object.entries(LABELS).map(([k,v])=>`<option value="${k}"${k===val?' selected':''}>${v}</option>`).join('');
     return `<div class="dp-form-group dp-item"><label class="dp-form-label">${escapeHtml(label)}</label><select class="dp-form-select" id="edit_${field}">${opts}</select></div>`;
+  }
+  // الحقول التي تبدأ بـ date_ تستخدم date picker تلقائياً
+  if(!type&&field&&field.startsWith('date_')){
+    return `<div class="dp-form-group dp-item"><label class="dp-form-label">${escapeHtml(label)}</label><input class="dp-form-input" type="date" id="edit_${field}" value="${escapeHtml(_toIsoDate(val))}"></div>`;
   }
   const t=type||'text';
   return `<div class="dp-form-group dp-item"><label class="dp-form-label">${escapeHtml(label)}</label><input class="dp-form-input" type="${t}" id="edit_${field}" value="${escapeHtml(val)}"${t==='number'&&field==='progress'?' min="0" max="100"':''}></div>`;
@@ -1972,7 +1964,9 @@ function exportExcel(){
   ws['!cols'][0]={wch:40};ws['!cols'][18]={wch:28};ws['!cols'][30]={wch:30};ws['!cols'][31]={wch:40};
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'المشاريع');
-  XLSX.writeFile(wb,'مشاريع_بلدية_بلقرن.xlsx');
+  const d=new Date();const pad=n=>String(n).padStart(2,'0');
+  const fname='مشاريع_بلدية_بلقرن_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'.xlsx';
+  XLSX.writeFile(wb,fname);
 }
 
 // ─── تصدير الدوال للاستخدام من HTML onclick ───
