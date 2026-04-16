@@ -247,6 +247,21 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 .dp-item:hover .copy-btn,.date-item:hover .copy-btn,.dp-action:hover .copy-btn,.dp-brief-box:hover .copy-btn,.dp-notes-box:hover .copy-btn{opacity:.9;}
 .dp-item,.date-item,.dp-action,.dp-brief-box,.dp-notes-box{position:relative;}
 .copy-toast{position:fixed;bottom:30px;right:30px;background:var(--advanced);color:#fff;padding:10px 20px;border-radius:10px;font-size:12px;font-weight:700;box-shadow:0 6px 20px var(--shadow);z-index:9999;opacity:0;transform:translateY(20px);transition:all .25s;pointer-events:none;}
+.mx-overlay{position:fixed;inset:0;background:var(--overlay-bg,rgba(57,32,21,.55));backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;padding:20px;}
+.mx-overlay.open{opacity:1;pointer-events:all;}
+.mx-box{background:var(--bg);border:1px solid var(--gborder2);border-radius:18px;max-width:480px;width:100%;box-shadow:0 24px 60px var(--shadow);transform:scale(.95);transition:transform .2s;overflow:hidden;}
+.mx-overlay.open .mx-box{transform:scale(1);}
+.mx-title{padding:18px 22px 8px;font-size:16px;font-weight:900;color:var(--text);border-bottom:1px solid var(--gborder);}
+.mx-msg{padding:16px 22px;font-size:13px;color:var(--text2);line-height:1.8;white-space:pre-wrap;max-height:50vh;overflow-y:auto;font-weight:600;}
+.mx-actions{padding:12px 22px 18px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;border-top:1px solid var(--gborder);}
+.mx-btn{padding:9px 22px;border-radius:9px;border:1px solid var(--gborder2);font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:all .15s;background:var(--glass);color:var(--text2);}
+.mx-btn:hover{background:var(--glass2);border-color:var(--gborder2);}
+.mx-btn.primary{background:var(--advanced);color:#fff;border-color:var(--advanced);}
+.mx-btn.primary:hover{opacity:.9;}
+.mx-btn.danger{background:var(--stalled);color:#fff;border-color:var(--stalled);}
+.mx-btn.danger:hover{opacity:.9;}
+.mx-input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--gborder2);background:var(--glass);color:var(--text);font-family:inherit;font-size:13px;font-weight:600;margin-top:8px;outline:none;}
+.mx-input:focus{border-color:var(--advanced);}
 .copy-toast.show{opacity:1;transform:translateY(0);}
 @media print{.copy-btn,.copy-toast{display:none!important;}}
 .fbtn .f-count{display:inline-block;margin-right:4px;padding:1px 6px;border-radius:8px;background:var(--gborder);color:var(--text3);font-size:9px;font-weight:800;min-width:16px;}
@@ -376,6 +391,13 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
   <div class="detail-panel" id="detailPanel"></div>
 </div>
 <div class="copy-toast" id="copyToast" role="status" aria-live="polite">&#10003; تم النسخ</div>
+<div class="mx-overlay" id="mxOverlay" role="dialog" aria-modal="true" aria-labelledby="mxTitle">
+  <div class="mx-box">
+    <div class="mx-title" id="mxTitle"></div>
+    <div class="mx-msg" id="mxMsg"></div>
+    <div class="mx-actions" id="mxActions"></div>
+  </div>
+</div>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
@@ -423,6 +445,75 @@ let sortDir=1;
 
 function escapeHtml(t){if(t==null)return '';return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
+// ─── مودال مخصص: بديل لـ alert/confirm/prompt ───
+let _mxResolve=null;
+function _mxClose(value){
+  const ov=document.getElementById('mxOverlay');
+  if(ov)ov.classList.remove('open');
+  const r=_mxResolve;_mxResolve=null;
+  if(r)r(value);
+}
+function _mxOpen(opts){
+  // opts: {title, msg, buttons:[{label,value,kind}], inputDefault?}
+  return new Promise(resolve=>{
+    // إغلاق أي مودال سابق مفتوح
+    if(_mxResolve){const r=_mxResolve;_mxResolve=null;try{r(null);}catch(e){}}
+    _mxResolve=resolve;
+    const ov=document.getElementById('mxOverlay');
+    document.getElementById('mxTitle').textContent=opts.title||'';
+    const msgEl=document.getElementById('mxMsg');
+    msgEl.innerHTML='';
+    const msgP=document.createElement('div');msgP.textContent=opts.msg||'';msgEl.appendChild(msgP);
+    let inputEl=null;
+    if(opts.input){
+      inputEl=document.createElement('input');inputEl.type='text';inputEl.className='mx-input';inputEl.value=opts.inputDefault||'';
+      msgEl.appendChild(inputEl);
+    }
+    const acts=document.getElementById('mxActions');
+    acts.innerHTML='';
+    (opts.buttons||[{label:'موافق',value:true,kind:'primary'}]).forEach(b=>{
+      const btn=document.createElement('button');
+      btn.className='mx-btn'+(b.kind?' '+b.kind:'');
+      btn.textContent=b.label;
+      btn.onclick=()=>{
+        if(inputEl&&b.value!==false&&b.value!==null)_mxClose(inputEl.value);
+        else _mxClose(b.value);
+      };
+      acts.appendChild(btn);
+    });
+    ov.classList.add('open');
+    setTimeout(()=>{(inputEl||acts.querySelector('.mx-btn.primary')||acts.querySelector('.mx-btn'))?.focus();},50);
+  });
+}
+function showAlert(msg,title){
+  return _mxOpen({title:title||'تنبيه',msg,buttons:[{label:'موافق',value:true,kind:'primary'}]});
+}
+function showConfirm(msg,opts){
+  opts=opts||{};
+  return _mxOpen({
+    title:opts.title||'تأكيد',
+    msg,
+    buttons:[
+      {label:opts.okLabel||'نعم',value:true,kind:opts.danger?'danger':'primary'},
+      {label:opts.cancelLabel||'إلغاء',value:false}
+    ]
+  });
+}
+// مستمع Escape للمودال
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    const ov=document.getElementById('mxOverlay');
+    if(ov&&ov.classList.contains('open')){e.preventDefault();_mxClose(false);}
+  }
+});
+// النقر على الخلفية يغلق (false)
+setTimeout(()=>{
+  const ov=document.getElementById('mxOverlay');
+  if(ov)ov.addEventListener('click',e=>{if(e.target===ov)_mxClose(false);});
+},0);
+window.showAlert=showAlert;
+window.showConfirm=showConfirm;
+
 let currentUser=null;
 let hiddenFields=[];
 let _busy=false;
@@ -431,7 +522,7 @@ async function loadHiddenFields(){
   try{const d=await getDoc(doc(db,'meta','hiddenFields'));if(d.exists())hiddenFields=d.data().fields||[];}catch(e){hiddenFields=[];}
 }
 async function saveHiddenFields(){
-  try{await setDoc(doc(db,'meta','hiddenFields'),{fields:hiddenFields});}catch(e){console.error('saveHiddenFields',e);alert('تعذّر حفظ الإعدادات. تأكد من الاتصال والصلاحيات.');}
+  try{await setDoc(doc(db,'meta','hiddenFields'),{fields:hiddenFields});}catch(e){console.error('saveHiddenFields',e);showAlert('تعذّر حفظ الإعدادات. تأكد من الاتصال والصلاحيات.');}
 }
 // ⚠️ تنبيه أمني: "إخفاء الحقول" هو إخفاء بصري على العميل فقط.
 // قواعد Firestore تسمح لأي مستخدم موثّق بقراءة الوثيقة كاملة.
@@ -819,7 +910,7 @@ async function quickToggleHide(field){
         btn.innerHTML=!nowHidden?LOCK_SVG_CLOSED:LOCK_SVG_OPEN;
       }
     });
-    alert('تعذّر حفظ الإعداد. تحقق من الاتصال.');
+    showAlert('تعذّر حفظ الإعداد. تحقق من الاتصال.');
   }
 }
 window.quickToggleHide=quickToggleHide;
@@ -1063,7 +1154,7 @@ function openProjectPrintSettings(id){
   if(!currentUser||currentUser.role!=='admin')return;
   const p=projects.find(x=>x.id===id);if(!p)return;
   const fields=_getProjectFields(id);
-  if(!fields.length){alert('لا توجد بيانات قابلة للطباعة في هذا المشروع');return;}
+  if(!fields.length){showAlert('لا توجد بيانات قابلة للطباعة في هذا المشروع');return;}
   // تهيئة الافتراضي: عند أول فتح، المخفي غير محدد (أي في الاستثناءات)
   if(!_printDetailInitialized){
     _printDetailExcluded.clear();
@@ -1541,11 +1632,11 @@ async function saveProject(id){
   const p=projects.find(x=>x.id===id);if(!p){_busy=false;return;}
   const v=f=>{ const el=document.getElementById('edit_'+f); return el?el.value:''; };
   const nameVal=v('name').trim();
-  if(!nameVal){alert('اسم المشروع مطلوب');return;}
+  if(!nameVal){await showAlert('اسم المشروع مطلوب');return;}
   const progVal=parseInt(v('progress'))||0;
-  if(progVal<0||progVal>100){alert('نسبة الإنجاز يجب أن تكون بين 0 و 100');return;}
+  if(progVal<0||progVal>100){await showAlert('نسبة الإنجاز يجب أن تكون بين 0 و 100');return;}
   const valNum=parseFloat(v('value_num'))||0;
-  if(valNum<0){alert('القيمة التعاقدية لا يمكن أن تكون سالبة');return;}
+  if(valNum<0){await showAlert('القيمة التعاقدية لا يمكن أن تكون سالبة');return;}
   p.name=nameVal;
   p.status=v('status');p.status_raw=LABELS[p.status]||p.status_raw;
   p.status_raw=LABELS[p.status]||p.status;
@@ -1637,7 +1728,7 @@ async function saveProject(id){
   p.contractor_rank=v('contractor_rank');
   p.letters=v('letters');
   p.notes=v('notes');
-  try{await setDoc(doc(db,'projects',String(p.id)),{...p});}catch(e){console.error('saveProject',e);alert('تعذّر حفظ المشروع. تحقق من الاتصال والصلاحيات.');_busy=false;return;}
+  try{await setDoc(doc(db,'projects',String(p.id)),{...p});}catch(e){console.error('saveProject',e);showAlert('تعذّر حفظ المشروع. تحقق من الاتصال والصلاحيات.');_busy=false;return;}
   updateLastModified();
   renderAll();
   openDetail(id);
@@ -1651,7 +1742,7 @@ async function addNewProject(){
   const np={id:newId,name:'مشروع جديد',status:'pending',status_raw:'قيد الترسية',phase:'',progress:0,value:'0',value_num:0,contractor:'',supervisor:'',consultant:'',consultant_phone:'',pm:'',pm_email:'',pm_phone:'',category:'',budget_door:'',contract_no:'',project_no:'',duration_days:0,duration_after_ext:0,ext1:'',ext2:'',ext3:'',stops:0,date_sign:'',date_site:'',date_end:'',date_end_adj:'',date_receive_primary:'',date_receive_primary_adj:'',date_receive_final:'',date_updated:new Date().toISOString().slice(0,10),last_action:'',notes:'',letters:'',vision_linked:'',initiative:'',tax_pct:0,increase_pct:0,contractor_engineer:'',contractor_email:'',contractor_phone:'',contractor_rank:'',scope:'',description:'',sector:'',municipality:'',status_mashroat:'',is_bidding:'',elapsed_pct:0,elapsed_ext_pct:0,delay_pct:0,correction_days:0,is_stopped:'',is_received_primary:''};
   projects.push(np);
   try{await setDoc(doc(db,'projects',String(newId)),{...np});}
-  catch(e){console.error('addNewProject',e);alert('تعذّر إنشاء المشروع. تحقق من الاتصال والصلاحيات.');projects.pop();return;}
+  catch(e){console.error('addNewProject',e);showAlert('تعذّر إنشاء المشروع. تحقق من الاتصال والصلاحيات.');projects.pop();return;}
   const overlay=document.getElementById('detailOverlay');
   overlay.classList.add('open');
   document.body.style.overflow='hidden';
@@ -1663,8 +1754,8 @@ async function deleteProject(id){
   try{
   const p=projects.find(x=>x.id===id);
   if(!p)return;
-  if(!confirm('هل أنت متأكد من حذف المشروع:\n'+escapeHtml(p.name)+'؟'))return;
-  try{await deleteDoc(doc(db,'projects',String(id)));}catch(e){console.error('deleteProject',e);alert('تعذّر حذف المشروع. تحقق من الاتصال والصلاحيات.');return;}
+  if(!await showConfirm('هل أنت متأكد من حذف المشروع:\n'+p.name+'؟',{title:'تأكيد الحذف',okLabel:'حذف',danger:true}))return;
+  try{await deleteDoc(doc(db,'projects',String(id)));}catch(e){console.error('deleteProject',e);showAlert('تعذّر حذف المشروع. تحقق من الاتصال والصلاحيات.');return;}
   projects=projects.filter(x=>x.id!==id);
   updateLastModified();
   closeDetail();
@@ -1678,10 +1769,10 @@ document.getElementById('loginDisclaimer').innerHTML=_disclaimerHTML;
 function importExcel(input){
   if(_busy)return;
   const file=input.files[0]; if(!file) return;
-  if(file.size>5*1024*1024){alert('حجم الملف كبير جداً (الحد الأقصى 5 ميجابايت)');input.value='';return;}
+  if(file.size>5*1024*1024){showAlert('حجم الملف كبير جداً (الحد الأقصى 5 ميجابايت)');input.value='';return;}
   // التحقق من امتداد الملف
   const validExt=/\.(xlsx|xls|csv)$/i.test(file.name);
-  if(!validExt){alert('نوع الملف غير مدعوم. الرجاء استخدام xlsx أو xls أو csv');input.value='';return;}
+  if(!validExt){showAlert('نوع الملف غير مدعوم. الرجاء استخدام xlsx أو xls أو csv');input.value='';return;}
   _busy=true;
   const reader=new FileReader();
   reader.onload=async function(e){
@@ -1692,14 +1783,14 @@ function importExcel(input){
     const lowerName=file.name.toLowerCase();
     const isCsv=lowerName.endsWith('.csv');
     if(!isXlsx&&!isXls&&!isCsv){
-      alert('محتوى الملف لا يتطابق مع نوع xlsx/xls/csv صالح');_busy=false;input.value='';return;
+      showAlert('محتوى الملف لا يتطابق مع نوع xlsx/xls/csv صالح');_busy=false;input.value='';return;
     }
     let wb;
     try{wb=XLSX.read(e.target.result,{type:'array'});}
-    catch(err){console.error('xlsx parse',err);alert('تعذّر قراءة الملف. تأكد من صحته.');_busy=false;input.value='';return;}
+    catch(err){console.error('xlsx parse',err);showAlert('تعذّر قراءة الملف. تأكد من صحته.');_busy=false;input.value='';return;}
     const ws=wb.Sheets[wb.SheetNames[0]];
     const rows=XLSX.utils.sheet_to_json(ws);
-    if(!rows.length){alert('الملف فارغ');_busy=false; return;}
+    if(!rows.length){showAlert('الملف فارغ');_busy=false; return;}
     const STATUS_MAP={'متقدم':'advanced','متقدمة':'advanced','منتظم':'regular','منتظمة':'regular','جارية':'advanced','جاري':'advanced','قيد الطرح والترسية':'pending','قيد الترسية':'pending','متوقف':'stopped','متوقفة':'stopped','متأخر':'late','متأخرة':'late','متعثر':'stalled','متعثرة':'stalled','استلام ابتدائي':'preceipt','تم الاستلام ابتدائيا':'preceipt','منجز':'preceipt','منجزة':'preceipt','advanced':'advanced','regular':'regular','pending':'pending','stopped':'stopped','late':'late','stalled':'stalled','preceipt':'preceipt'};
     // دالة مرنة للبحث عن قيمة عمود بأسماء مختلفة
     function g(r,...keys){for(const k of keys){const v=r[k];if(v!==undefined&&v!==null&&v!=='')return v;}return '';}
@@ -1839,7 +1930,7 @@ function importExcel(input){
     if(modified.length){summary+='▸ مشاريع معدّلة ('+modified.length+'):\n';modified.forEach(m=>{summary+='  ✎ '+m.name+':\n'+m.changes.join('\n')+'\n';});summary+='\n';}
     if(!added.length&&!removed.length&&!modified.length)summary+='لا توجد تغييرات ملحوظة.\n';
     summary+='\n═══════════════════\nهل تريد المتابعة واستبدال جميع البيانات؟';
-    if(!confirm(summary)){_busy=false;return;}
+    if(!await showConfirm(summary,{title:'ملخص الاستيراد',okLabel:'متابعة واستبدال',danger:true})){_busy=false;return;}
     // ─── نسخة احتياطية محلية قبل الكتابة (في localStorage) — يمكن استرجاعها يدوياً ───
     try{
       const backupKey='projectsBackup_'+new Date().toISOString().replace(/[:.]/g,'-');
@@ -1856,12 +1947,12 @@ function importExcel(input){
       const batch=writeBatch(db);
       parsed.forEach(p=>batch.set(doc(db,'projects',String(p.id)),{...p}));
       await batch.commit();
-    }catch(e){console.error('importExcel-write',e);alert('تعذّر حفظ البيانات المستوردة. لم يتم تطبيق أي تغيير. تحقق من الاتصال والصلاحيات.');_busy=false;return;}
+    }catch(e){console.error('importExcel-write',e);showAlert('تعذّر حفظ البيانات المستوردة. لم يتم تطبيق أي تغيير. تحقق من الاتصال والصلاحيات.');_busy=false;return;}
     projects=parsed;
     filter='all';
     updateLastModified();
     renderAll();
-    alert('تم استيراد '+parsed.length+' مشروع بنجاح');
+    showAlert('تم استيراد '+parsed.length+' مشروع بنجاح',' استيراد ناجح');
     _busy=false;
   };
   reader.readAsArrayBuffer(file);
@@ -2098,11 +2189,11 @@ async function restoreBackup(key){
   if(_busy)return;
   if(!currentUser||currentUser.role!=='admin')return;
   const raw=localStorage.getItem(key);
-  if(!raw){alert('النسخة غير موجودة');return;}
+  if(!raw){showAlert('النسخة غير موجودة');return;}
   let data;
-  try{data=JSON.parse(raw);}catch(e){alert('النسخة تالفة');return;}
-  if(!data||!Array.isArray(data.projects)){alert('النسخة تالفة');return;}
-  if(!confirm('سيتم استبدال جميع المشاريع الحالية ('+projects.length+') بـ '+data.projects.length+' مشروع من النسخة المحفوظة بتاريخ:\n'+formatDateTime(data.savedAt)+'\n\nسيتم أخذ نسخة احتياطية للحالة الحالية أولاً. هل أنت متأكد؟'))return;
+  try{data=JSON.parse(raw);}catch(e){showAlert('النسخة تالفة');return;}
+  if(!data||!Array.isArray(data.projects)){showAlert('النسخة تالفة');return;}
+  if(!await showConfirm('سيتم استبدال جميع المشاريع الحالية ('+projects.length+') بـ '+data.projects.length+' مشروع من النسخة المحفوظة بتاريخ:\n'+formatDateTime(data.savedAt)+'\n\nسيتم أخذ نسخة احتياطية للحالة الحالية أولاً. هل أنت متأكد؟',{title:'تأكيد الاسترجاع',okLabel:'استرجاع',danger:true}))return;
   _busy=true;
   // نسخة احتياطية محلية للحالة الحالية قبل الاسترجاع
   try{
@@ -2119,19 +2210,19 @@ async function restoreBackup(key){
     const batch=writeBatch(db);
     data.projects.forEach(p=>batch.set(doc(db,'projects',String(p.id)),{...p}));
     await batch.commit();
-  }catch(e){console.error('restoreBackup',e);alert('تعذّر استرجاع النسخة. تحقق من الاتصال والصلاحيات.');_busy=false;return;}
+  }catch(e){console.error('restoreBackup',e);showAlert('تعذّر استرجاع النسخة. تحقق من الاتصال والصلاحيات.');_busy=false;return;}
   projects=data.projects.slice();
   filter='all';
   updateLastModified();
   closeDetail();
   renderAll();
   _busy=false;
-  alert('تم استرجاع النسخة بنجاح');
+  showAlert('تم استرجاع النسخة بنجاح','اكتمل الاسترجاع');
 }
 
-function deleteBackup(key){
+async function deleteBackup(key){
   if(!currentUser||currentUser.role!=='admin')return;
-  if(!confirm('حذف هذه النسخة الاحتياطية نهائياً؟ لا يمكن التراجع.'))return;
+  if(!await showConfirm('حذف هذه النسخة الاحتياطية نهائياً؟ لا يمكن التراجع.',{title:'تأكيد الحذف',okLabel:'حذف',danger:true}))return;
   localStorage.removeItem(key);
   openBackupsManager();
 }
