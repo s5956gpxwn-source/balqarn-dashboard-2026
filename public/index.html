@@ -22,6 +22,13 @@
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+html{scroll-behavior:smooth;}
+*:focus{outline:none;}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible,label:focus-visible,.kpi:focus-visible,.proj-card:focus-visible,.d-row:focus-visible,.bar-item:focus-visible{outline:2px solid var(--advanced);outline-offset:2px;border-radius:6px;}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important;scroll-behavior:auto!important;}
+  html{scroll-behavior:auto!important;}
+}
 :root{--tr:all .35s ease;}
 body.light{--overlay-bg:rgba(57,32,21,.55);--bg:#F2E7DE;--bg2:#E5CFBD;--glass:rgba(255,255,255,0.55);--glass2:rgba(255,255,255,0.82);--gborder:rgba(57,32,21,0.13);--gborder2:rgba(57,32,21,0.28);--text:#392015;--text2:#614C44;--text3:#887973;--text4:#C4BCB9;--advanced:#007B69;--advancedt:rgba(0,123,105,0.12);--regular:#66B0A5;--regulart:rgba(102,176,165,0.12);--pending:#A37956;--pendingt:rgba(163,121,86,0.12);--stopped:#E3A778;--stoppedt:rgba(227,167,120,0.12);--late:#E0C5C9;--latet:rgba(224,197,201,0.12);--stalled:#973D4B;--stalledt:rgba(151,61,75,0.12);--preceipt:#D4AF91;--preceiptt:rgba(212,175,145,0.12);--shadow:rgba(57,32,21,0.10);--sig-filter:brightness(0) sepia(1) saturate(2) hue-rotate(340deg) brightness(0.4);--sig-op:0.55;}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -335,15 +342,15 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
   </div>
   <div class="orn-div">
     <div class="orn-div-line"></div>
-    <img class="orn-icon" src="assets/ornaments/shajara.png" alt="">
+    <img class="orn-icon" loading="lazy" src="assets/ornaments/shajara.png" alt="">
     <div class="orn-div-line"></div>
-    <img class="orn-icon" src="assets/ornaments/arda.png" alt="">
+    <img class="orn-icon" loading="lazy" src="assets/ornaments/arda.png" alt="">
     <div class="orn-div-line"></div>
-    <img class="orn-icon" src="assets/ornaments/sanbala.png" alt="">
+    <img class="orn-icon" loading="lazy" src="assets/ornaments/sanbala.png" alt="">
     <div class="orn-div-line"></div>
-    <img class="orn-icon" src="assets/ornaments/bayt.png" alt="">
+    <img class="orn-icon" loading="lazy" src="assets/ornaments/bayt.png" alt="">
     <div class="orn-div-line"></div>
-    <img class="orn-icon" src="assets/ornaments/jabal.png" alt="">
+    <img class="orn-icon" loading="lazy" src="assets/ornaments/jabal.png" alt="">
     <div class="orn-div-line"></div>
   </div>
   <div class="sec-hdr">
@@ -426,6 +433,16 @@ let filter='all';
 let searchQuery='';
 let sortBy='id';
 let sortDir=1;
+// استرجاع آخر حالة فلتر/فرز من الجلسة (تُمسح بإغلاق التبويب)
+try{
+  const saved=JSON.parse(sessionStorage.getItem('uiState')||'{}');
+  if(saved.filter)filter=saved.filter;
+  if(saved.sortBy)sortBy=saved.sortBy;
+  if(typeof saved.sortDir==='number')sortDir=saved.sortDir;
+}catch(e){}
+function _saveUIState(){
+  try{sessionStorage.setItem('uiState',JSON.stringify({filter,sortBy,sortDir}));}catch(e){}
+}
 
 function escapeHtml(t){if(t==null)return '';return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
@@ -486,6 +503,8 @@ function applyLogin(){
   }else{
     document.querySelectorAll('.admin-only').forEach(el=>el.style.display='none');
   }
+  // استعادة حالة الفلتر المحفوظة (من sessionStorage)
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.toggle('active',b.getAttribute('data-filter')===filter));
 }
 
 window.doLogout=async function(){
@@ -627,7 +646,7 @@ function renderKPI(){
   ];
   document.getElementById('kpiStrip').innerHTML=defs.map(d=>`
     <div class="kpi ${d.sc} ${filter===d.f&&!d.money?'active-f':''}" ${d.money?'':'onclick="setFilterFromKPI(\''+d.f+'\')"'}>
-      <img class="kpi-orn" src="${ORNS[d.orn]}" alt="">
+      <img class="kpi-orn" loading="lazy" src="${ORNS[d.orn]}" alt="">
       <div class="kpi-val ${d.money?'money':''}">${d.val}</div>
       <div class="kpi-lbl">${d.label}</div>
       <div class="kpi-sub ${d.cls}">${d.sub}</div>
@@ -749,7 +768,7 @@ function handleSearch(q){
   _searchTimer=setTimeout(()=>{searchQuery=q.trim();renderGrid();},150);
 }
 function clearSearch(){document.getElementById('searchInput').value='';handleSearch('');}
-function setSort(field,btn){if(sortBy===field){sortDir*=-1;}else{sortBy=field;sortDir=field==='id'?1:-1;}document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');btn.textContent=btn.textContent.replace(/ [▲▼]/,'')+(field==='id'?'':sortDir>0?' ▲':' ▼');renderAll();}
+function setSort(field,btn){if(sortBy===field){sortDir*=-1;}else{sortBy=field;sortDir=field==='id'?1:-1;}document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');btn.textContent=btn.textContent.replace(/ [▲▼]/,'')+(field==='id'?'':sortDir>0?' ▲':' ▼');_saveUIState();renderAll();}
 window.handleSearch=handleSearch;
 window.clearSearch=clearSearch;
 window.setSort=setSort;
@@ -764,7 +783,7 @@ function renderGrid(){
         const orn=CARD_ORNS[i%CARD_ORNS.length];
         return `<div class="proj-card" onclick="openDetail(${p.id})" style="animation-delay:${i*.04}s">
           <div class="card-stripe s-${p.status}"></div>
-          <img class="card-orn" src="${orn}" alt="">
+          <img class="card-orn" loading="lazy" src="${orn}" alt="">
           <div class="card-top">
             <div class="card-name">${escapeHtml(p.name)}</div>
             <span class="sbadge b-${p.status}">${escapeHtml(LABELS[p.status])}</span>
@@ -792,14 +811,15 @@ function setFilter(f,btn){
   filter=f;
   document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  _saveUIState();
   renderAll();
 }
 function setFilterFromKPI(f){
   filter=f;
-  const map={all:'الكل',advanced:'متقدم',regular:'منتظم',pending:'قيد الترسية',stopped:'متوقف',late:'متأخر',stalled:'متعثر',preceipt:'تم الاستلام ابتدائيا'};
   document.querySelectorAll('.fbtn').forEach(b=>{
-    b.classList.toggle('active',(f==='all'&&b.textContent.trim()==='الكل')||b.textContent.trim()===map[f]);
+    b.classList.toggle('active',b.getAttribute('data-filter')===f);
   });
+  _saveUIState();
   renderAll();
 }
 
@@ -892,7 +912,7 @@ function row(lbl,val,full,safe){
   const ornKeys=['tawq','takatuf','arda','sanbala','shajara','qit','jabal'];
   const orn=ORNS[ornKeys[_rowOrnIdx%ornKeys.length]];
   _rowOrnIdx++;
-  return `<div class="dp-item${full?' full':''}" data-pf="${escapeHtml(lbl)}"><img class="dp-item-orn" src="${orn}"><div class="di-lbl">${lockBtn(lbl)}${escapeHtml(lbl)}</div><div class="field-row"><div class="di-val" style="flex:1">${v}</div>${copyBtn(rawForCopy)}</div></div>`;
+  return `<div class="dp-item${full?' full':''}" data-pf="${escapeHtml(lbl)}"><img class="dp-item-orn" loading="lazy" src="${orn}"><div class="di-lbl">${lockBtn(lbl)}${escapeHtml(lbl)}</div><div class="field-row"><div class="di-val" style="flex:1">${v}</div>${copyBtn(rawForCopy)}</div></div>`;
 }
 
 function openDetail(id){
@@ -905,7 +925,7 @@ function openDetail(id){
   const orn=CARD_ORNS[p.id%CARD_ORNS.length];
   document.getElementById('detailPanel').innerHTML=`
     <div class="dp-head">
-      <img class="dp-head-orn" src="${orn}" alt="">
+      <img class="dp-head-orn" loading="lazy" src="${orn}" alt="">
       <div>
         <div class="dp-name">${escapeHtml(p.name)}</div>
         <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
