@@ -433,16 +433,6 @@ let filter='all';
 let searchQuery='';
 let sortBy='id';
 let sortDir=1;
-// استرجاع آخر حالة فلتر/فرز من الجلسة (تُمسح بإغلاق التبويب)
-try{
-  const saved=JSON.parse(sessionStorage.getItem('uiState')||'{}');
-  if(saved.filter)filter=saved.filter;
-  if(saved.sortBy)sortBy=saved.sortBy;
-  if(typeof saved.sortDir==='number')sortDir=saved.sortDir;
-}catch(e){}
-function _saveUIState(){
-  try{sessionStorage.setItem('uiState',JSON.stringify({filter,sortBy,sortDir}));}catch(e){}
-}
 
 function escapeHtml(t){if(t==null)return '';return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
@@ -503,8 +493,6 @@ function applyLogin(){
   }else{
     document.querySelectorAll('.admin-only').forEach(el=>el.style.display='none');
   }
-  // استعادة حالة الفلتر المحفوظة (من sessionStorage)
-  document.querySelectorAll('.fbtn').forEach(b=>b.classList.toggle('active',b.getAttribute('data-filter')===filter));
 }
 
 window.doLogout=async function(){
@@ -768,7 +756,7 @@ function handleSearch(q){
   _searchTimer=setTimeout(()=>{searchQuery=q.trim();renderGrid();},150);
 }
 function clearSearch(){document.getElementById('searchInput').value='';handleSearch('');}
-function setSort(field,btn){if(sortBy===field){sortDir*=-1;}else{sortBy=field;sortDir=field==='id'?1:-1;}document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');btn.textContent=btn.textContent.replace(/ [▲▼]/,'')+(field==='id'?'':sortDir>0?' ▲':' ▼');_saveUIState();renderAll();}
+function setSort(field,btn){if(sortBy===field){sortDir*=-1;}else{sortBy=field;sortDir=field==='id'?1:-1;}document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');btn.textContent=btn.textContent.replace(/ [▲▼]/,'')+(field==='id'?'':sortDir>0?' ▲':' ▼');renderAll();}
 window.handleSearch=handleSearch;
 window.clearSearch=clearSearch;
 window.setSort=setSort;
@@ -811,7 +799,6 @@ function setFilter(f,btn){
   filter=f;
   document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  _saveUIState();
   renderAll();
 }
 function setFilterFromKPI(f){
@@ -819,7 +806,6 @@ function setFilterFromKPI(f){
   document.querySelectorAll('.fbtn').forEach(b=>{
     b.classList.toggle('active',b.getAttribute('data-filter')===f);
   });
-  _saveUIState();
   renderAll();
 }
 
