@@ -239,10 +239,11 @@ body.dark .card-notes{color:var(--preceipt);}
 body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue-rotate(340deg) brightness(1.8);opacity:.08;}
 .theme-btn{background:var(--glass);border:1px solid var(--gborder);color:var(--text3);width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
 .theme-btn:hover{background:var(--glass2);border-color:var(--gborder2);color:var(--text);}
-.field-lock{display:inline-flex;align-items:center;justify-content:center;background:var(--glass);border:1px solid var(--gborder);border-radius:5px;cursor:pointer;padding:1px 5px;font-size:10px;line-height:1;margin-left:5px;color:var(--text3);font-family:inherit;transition:all .15s;vertical-align:middle;}
-.field-lock:hover{background:var(--glass2);border-color:var(--gborder2);color:var(--text);transform:scale(1.08);}
-.field-lock.locked{background:var(--stalledt);border-color:rgba(151,61,75,.4);color:var(--stalled);}
-.field-lock.locked:hover{background:rgba(151,61,75,.2);}
+.field-lock{display:inline-flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;padding:2px;margin-left:4px;color:var(--text4);opacity:.45;transition:opacity .15s,color .15s,transform .1s;vertical-align:middle;line-height:0;}
+.field-lock svg{width:11px;height:11px;display:block;}
+.field-lock:hover{opacity:1;color:var(--advanced);transform:scale(1.15);}
+.field-lock.locked{color:var(--stalled);opacity:.85;}
+.field-lock.locked:hover{color:var(--stalled);opacity:1;}
 @media print{.field-lock{display:none!important;}}
 </style>
 </head>
@@ -781,23 +782,43 @@ let _currentDetailId=null;
 
 // زر قفل صغير بجانب كل حقل — يظهر للأدمن فقط
 // يحوّل الحقل بين مخفي/ظاهر للمستخدمين العاديين
+const LOCK_SVG_OPEN='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V4.5a3 3 0 0 1 6 0V5"/></svg>';
+const LOCK_SVG_CLOSED='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V4.5a3 3 0 0 1 6 0V7"/></svg>';
 function lockBtn(label){
   if(!currentUser||currentUser.role!=='admin')return '';
   const isHidden=hiddenFields.includes(label);
   const safe=label.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const title=isHidden?'مخفي عن المستخدمين — اضغط للإظهار':'ظاهر — اضغط للإخفاء عن المستخدمين';
-  return `<button class="field-lock${isHidden?' locked':''}" onclick="event.stopPropagation();quickToggleHide('${safe}')" title="${title}">${isHidden?'&#128274;':'&#128275;'}</button>`;
+  return `<button type="button" class="field-lock${isHidden?' locked':''}" data-pf-lock="${escapeHtml(label)}" onclick="event.stopPropagation();quickToggleHide('${safe}')" title="${title}" aria-label="${title}">${isHidden?LOCK_SVG_CLOSED:LOCK_SVG_OPEN}</button>`;
 }
 
 async function quickToggleHide(field){
   if(!currentUser||currentUser.role!=='admin')return;
-  if(hiddenFields.includes(field))hiddenFields=hiddenFields.filter(f=>f!==field);
-  else hiddenFields.push(field);
-  await saveHiddenFields();
-  if(_currentDetailId!=null){
-    const sp=document.getElementById('detailPanel').scrollTop;
-    openDetail(_currentDetailId);
-    setTimeout(()=>{const panel=document.getElementById('detailPanel');if(panel)panel.scrollTop=sp;},20);
+  const nowHidden=!hiddenFields.includes(field);
+  if(nowHidden)hiddenFields.push(field);
+  else hiddenFields=hiddenFields.filter(f=>f!==field);
+  // تحديث فوري للأزرار المعنية بهذا الحقل فقط (بدون إعادة بناء DOM)
+  document.querySelectorAll('.field-lock').forEach(btn=>{
+    if(btn.getAttribute('data-pf-lock')===field){
+      btn.classList.toggle('locked',nowHidden);
+      btn.innerHTML=nowHidden?LOCK_SVG_CLOSED:LOCK_SVG_OPEN;
+      const t=nowHidden?'مخفي عن المستخدمين — اضغط للإظهار':'ظاهر — اضغط للإخفاء عن المستخدمين';
+      btn.title=t;btn.setAttribute('aria-label',t);
+    }
+  });
+  // حفظ في الخلفية
+  try{await setDoc(doc(db,'meta','hiddenFields'),{fields:hiddenFields});}
+  catch(e){console.error('quickToggleHide save',e);
+    // تراجع في حال الفشل
+    if(nowHidden)hiddenFields=hiddenFields.filter(f=>f!==field);
+    else hiddenFields.push(field);
+    document.querySelectorAll('.field-lock').forEach(btn=>{
+      if(btn.getAttribute('data-pf-lock')===field){
+        btn.classList.toggle('locked',!nowHidden);
+        btn.innerHTML=!nowHidden?LOCK_SVG_CLOSED:LOCK_SVG_OPEN;
+      }
+    });
+    alert('تعذّر حفظ الإعداد. تحقق من الاتصال.');
   }
 }
 window.quickToggleHide=quickToggleHide;
