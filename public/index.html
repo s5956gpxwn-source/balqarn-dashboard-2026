@@ -681,6 +681,7 @@ onAuthStateChanged(auth,async(user)=>{
         await loadHiddenFields();
         applyLogin();
         renderAll();
+        _openFromUrl();
         loader.classList.add('hidden');
         if(skel)skel.classList.add('hidden');
       }catch(e){console.warn('cache restore failed',e);}
@@ -714,6 +715,7 @@ onAuthStateChanged(auth,async(user)=>{
         applyLogin();
         renderAll();
       }
+      _openFromUrl();
       if(skel)skel.classList.add('hidden');
     }catch(e){console.warn('firestore refresh failed',e);if(skel)skel.classList.add('hidden');}
   }else{
@@ -1043,7 +1045,16 @@ function row(lbl,val,full,safe){
 function openDetail(id){
   _rowOrnIdx=0;
   const p=projects.find(x=>x.id===id);if(!p)return;
+  const isChange=_currentDetailId!==id;
   _currentDetailId=id;
+  // تحديث URL لمشاركة الرابط المباشر
+  try{
+    const u=new URL(window.location.href);
+    u.searchParams.set('project',String(id));
+    const newUrl=u.pathname+u.search+u.hash;
+    if(isChange)history.pushState({project:id},'',newUrl);
+    else history.replaceState({project:id},'',newUrl);
+  }catch(e){}
   const C=COLORS[p.status];
   const dtrow=(l,v)=>{if(!v||isFieldHidden(l))return '';return `<div class="date-item" data-pf="${escapeHtml(l)}">${copyBtn(v)}<div class="date-lbl">${lockBtn(l)}${escapeHtml(l)}</div><div class="date-val">${v}</div></div>`;};
 
@@ -1158,6 +1169,11 @@ async function closeDetail(){
   _currentDetailId=null;
   document.getElementById('detailOverlay').classList.remove('open');
   document.body.style.overflow='';
+  // إزالة معرّف المشروع من URL
+  try{
+    const u=new URL(window.location.href);
+    if(u.searchParams.has('project')){u.searchParams.delete('project');history.pushState({},'',u.pathname+u.search+u.hash);}
+  }catch(e){}
 }
 function printDetail(){
 const panel=document.getElementById('detailPanel');
@@ -2393,6 +2409,39 @@ function applyThemeAssets(){
 // الافتراضي دائماً فاتح - الثيم يتغير فقط بعد تسجيل الدخول حسب تفضيل المستخدم
 applyThemeAssets();
 window.toggleTheme=toggleTheme;
+
+// ─── Deep links: فتح مشروع من URL ?project=ID ───
+let _deepLinkHandled=false;
+function _openFromUrl(){
+  if(_deepLinkHandled)return;
+  try{
+    const pid=new URLSearchParams(window.location.search).get('project');
+    if(!pid){_deepLinkHandled=true;return;}
+    const id=Number(pid);
+    if(isNaN(id))return;
+    if(!projects.find(p=>p.id===id))return;
+    _deepLinkHandled=true;
+    if(_currentDetailId===id)return;
+    document.getElementById('detailOverlay').classList.add('open');
+    document.body.style.overflow='hidden';
+    openDetail(id);
+  }catch(e){console.warn('openFromUrl',e);}
+}
+// استجابة لأزرار back/forward في المتصفح
+window.addEventListener('popstate',e=>{
+  const pid=new URLSearchParams(window.location.search).get('project');
+  const overlay=document.getElementById('detailOverlay');
+  if(pid){
+    const id=Number(pid);
+    if(!isNaN(id)&&projects.find(p=>p.id===id)){
+      overlay.classList.add('open');document.body.style.overflow='hidden';
+      _currentDetailId=id;openDetail(id);
+    }
+  }else{
+    _currentDetailId=null;_editDirty=false;
+    overlay.classList.remove('open');document.body.style.overflow='';
+  }
+});
 
 // ─── رصد حالة الاتصال بالإنترنت ───
 function _updateOnlineStatus(){
