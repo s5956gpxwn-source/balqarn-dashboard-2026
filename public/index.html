@@ -299,6 +299,16 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 .tr-bar:hover{opacity:.7;}
 .tr-tooltip{position:absolute;background:var(--glass2);border:1px solid var(--gborder2);border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;pointer-events:none;opacity:0;transition:opacity .15s;white-space:nowrap;z-index:5;color:var(--text);}
 .tr-tooltip.show{opacity:1;}
+.insights-banner{background:var(--pendingt);border:1px solid var(--pending);border-radius:12px;padding:12px 18px;margin-bottom:16px;}
+.ins-title{font-size:13px;font-weight:900;color:var(--pending);display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.ins-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;}
+.ins-group{background:var(--glass);border:1px solid var(--gborder);border-radius:10px;padding:10px 14px;}
+.ins-head{font-size:11px;font-weight:800;color:var(--text2);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.ins-head .ins-count{background:var(--pending);color:#fff;font-size:10px;padding:1px 8px;border-radius:8px;font-weight:900;}
+.ins-list{display:flex;flex-direction:column;gap:3px;}
+.ins-item{font-size:11px;color:var(--text);line-height:1.6;cursor:pointer;padding:3px 6px;border-radius:5px;transition:background .15s;display:flex;align-items:center;gap:6px;}
+.ins-item:hover{background:var(--glass2);color:var(--advanced);}
+.ins-item::before{content:"•";color:var(--pending);font-weight:900;}
 .skel{background:linear-gradient(90deg,var(--gborder) 0%,var(--glass2) 50%,var(--gborder) 100%);background-size:200% 100%;animation:skel-shimmer 1.4s linear infinite;border-radius:8px;}
 @keyframes skel-shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
 .skel-wrap{padding:20px 28px 0;max-width:1440px;margin:0 auto;}
@@ -395,6 +405,7 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
     <div class="alert-icon">&#9888;</div>
     <div class="alert-text" id="alertText"></div>
   </div>
+  <div class="insights-banner" id="insightsBanner" style="display:none"></div>
   <div class="charts-row">
     <div class="chart-card">
       <img class="chart-orn" id="chartOrn1" alt="">
@@ -804,7 +815,57 @@ function updateFilterCounts(){
   projects.forEach(p=>{if(cnt.hasOwnProperty(p.status))cnt[p.status]++;});
   document.querySelectorAll('.f-count').forEach(el=>{const k=el.getAttribute('data-count');if(cnt.hasOwnProperty(k))el.textContent=cnt[k];});
 }
-function renderAll(){try{renderKPI();}catch(e){}try{renderAlert();}catch(e){}try{renderDonut();}catch(e){}try{renderBars();}catch(e){}try{renderGrid();}catch(e){}try{updateFilterCounts();}catch(e){}showLastUpdate(localStorage.getItem('lastUpdate'));}
+function renderAll(){try{renderKPI();}catch(e){}try{renderAlert();}catch(e){}try{renderInsights();}catch(e){}try{renderDonut();}catch(e){}try{renderBars();}catch(e){}try{renderGrid();}catch(e){}try{updateFilterCounts();}catch(e){}showLastUpdate(localStorage.getItem('lastUpdate'));}
+
+// ─── مؤشرات تنبؤية: نصوص عامة بدون أرقام دقيقة ───
+function renderInsights(){
+  const banner=document.getElementById('insightsBanner');
+  if(!banner)return;
+  const today=new Date();today.setHours(0,0,0,0);
+  const soonDays=30; // نطاق داخلي لا يُعرض للمستخدم
+  const atRisk=[],nearEnd=[],stalledCloseToEnd=[];
+  projects.forEach(p=>{
+    // تجاهل المنجزة/المستلمة/المتوقفة
+    if(['preceipt','stopped'].includes(p.status))return;
+    const prog=Number(p.progress)||0;
+    const elapsed=Number(p.elapsed_ext_pct||p.elapsed_pct)||0;
+    const endD=_parseDate(p.date_end_adj)||_parseDate(p.date_end);
+    // معرّض للتعثّر: فجوة كبيرة بين نسبة المدة المنقضية ونسبة الإنجاز (ولم يُصنّف متعثراً بعد)
+    if(p.status!=='stalled'&&elapsed>0&&prog<elapsed-15&&prog<90){
+      atRisk.push(p);
+    }
+    // قرب الانتهاء: تاريخ الانتهاء قريب مع إنجاز ناقص
+    if(endD){
+      const diff=(endD-today)/86400000;
+      if(diff>=0&&diff<=soonDays&&prog<90){nearEnd.push(p);}
+    }
+    // متعثّر مع قرب انتهاء — تحذير مضاعف
+    if(p.status==='stalled'&&endD){
+      const diff=(endD-today)/86400000;
+      if(diff>=0&&diff<=soonDays*2)stalledCloseToEnd.push(p);
+    }
+  });
+  if(!atRisk.length&&!nearEnd.length&&!stalledCloseToEnd.length){
+    banner.style.display='none';return;
+  }
+  const group=(title,items,hint)=>items.length?`
+    <div class="ins-group">
+      <div class="ins-head"><span>${title}</span><span class="ins-count">${items.length}</span></div>
+      <div class="ins-list">
+        ${items.slice(0,6).map(p=>`<div class="ins-item" onclick="openDetail(${p.id})" title="${escapeHtml(p.name)}">${escapeHtml(p.name.length>40?p.name.substring(0,40)+'…':p.name)}</div>`).join('')}
+        ${items.length>6?`<div style="font-size:10px;color:var(--text3);margin-top:4px;font-weight:700">و ${items.length-6} مشروع آخر</div>`:''}
+      </div>
+    </div>`:'';
+  banner.innerHTML=`
+    <div class="ins-title">&#128202; مؤشرات تحتاج متابعة</div>
+    <div class="ins-groups">
+      ${group('مشاريع قد تحتاج متابعة',atRisk)}
+      ${group('مشاريع تقترب من تاريخ انتهائها',nearEnd)}
+      ${group('متعثّرة وتاريخ انتهائها قريب',stalledCloseToEnd)}
+    </div>`;
+  banner.style.display='block';
+}
+window.renderInsights=renderInsights;
 
 function renderKPI(){
   const total=projects.length;
