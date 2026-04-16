@@ -1049,6 +1049,74 @@ function renderTimeline(){
 }
 window.renderTimeline=renderTimeline;
 
+// ─── اتجاهات: مشاريع موقّعة/منتهية لكل شهر + قيم العقود ───
+function _monthKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function _monthLabel(k){const [y,m]=k.split('-');const names=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];return names[Number(m)-1]+' '+y;}
+function _aggMonthly(arr,dateKey,valKey){
+  const map={};
+  arr.forEach(p=>{const d=_parseDate(p[dateKey]);if(!d)return;const k=_monthKey(d);if(!map[k])map[k]={count:0,value:0};map[k].count++;map[k].value+=Number(p[valKey]||0);});
+  return map;
+}
+function _barChartSvg(data,color,valueFmt){
+  // data: [{label, count, value}] — يأخذ count أو value حسب المطلوب
+  if(!data.length)return '<div class="tl-empty">لا توجد بيانات كافية</div>';
+  const maxV=Math.max(...data.map(d=>d.v),1);
+  const W=Math.max(data.length*55,560);
+  const H=200;const padL=40,padR=10,padT=20,padB=50;
+  const chartW=W-padL-padR,chartH=H-padT-padB;
+  const barW=chartW/data.length*.7;
+  const gap=chartW/data.length*.3;
+  // خطوط شبكة
+  let grid='';
+  for(let i=0;i<=4;i++){
+    const y=padT+(chartH*i/4);const val=Math.round(maxV*(1-i/4));
+    grid+=`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="currentColor" stroke-opacity=".1"/>`;
+    grid+=`<text class="tr-grid-row" x="${padL-5}" y="${y+3}" text-anchor="end">${val}</text>`;
+  }
+  // الأعمدة
+  let bars='';
+  data.forEach((d,i)=>{
+    const x=W-padR-((i+1)*(barW+gap))+gap/2;
+    const h=(d.v/maxV)*chartH;
+    const y=padT+chartH-h;
+    const tip=d.label+' — '+(valueFmt?valueFmt(d.v):d.v);
+    bars+=`<rect class="tr-bar" x="${x}" y="${y}" width="${barW}" height="${h}" fill="${color}" data-tip="${escapeHtml(tip)}"><title>${escapeHtml(tip)}</title></rect>`;
+    bars+=`<text class="tr-grid-row" x="${x+barW/2}" y="${H-padB+14}" text-anchor="middle" transform="rotate(-35 ${x+barW/2} ${H-padB+14})">${escapeHtml(d.label)}</text>`;
+  });
+  return `<div class="tr-chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${grid}${bars}</svg></div>`;
+}
+function _sortedMonths(map){return Object.keys(map).sort();}
+
+function renderTrends(){
+  const container=document.getElementById('trendsView');
+  let list=filter==='all'?[...projects]:projects.filter(p=>p.status===filter);
+  if(searchQuery){const q=searchQuery.toLowerCase();list=list.filter(p=>(p.name||'').toLowerCase().includes(q)||(p.contractor||'').toLowerCase().includes(q));}
+  const signed=_aggMonthly(list,'date_sign','value_num');
+  const ending=_aggMonthly(list,'date_end','value_num');
+  const fmtCount=v=>v+' مشروع';
+  const fmtValue=v=>v>=1000000?(v/1000000).toFixed(2)+' م ريال':Math.round(v).toLocaleString('en-US')+' ريال';
+  function toSeries(map,useValue){
+    return _sortedMonths(map).map(k=>({label:_monthLabel(k),v:useValue?map[k].value:map[k].count}));
+  }
+  const signedCount=toSeries(signed,false);
+  const endingCount=toSeries(ending,false);
+  const signedValue=toSeries(signed,true);
+  container.innerHTML=`
+    <div class="tr-card">
+      <div class="tr-title">عدد المشاريع المُوقّعة شهرياً <span style="font-size:10px;color:var(--text3);font-weight:700">حسب تاريخ التوقيع</span></div>
+      ${_barChartSvg(signedCount,COLORS.advanced,fmtCount)}
+    </div>
+    <div class="tr-card">
+      <div class="tr-title">عدد المشاريع المنتهية شهرياً <span style="font-size:10px;color:var(--text3);font-weight:700">حسب تاريخ انتهاء العقد</span></div>
+      ${_barChartSvg(endingCount,COLORS.pending,fmtCount)}
+    </div>
+    <div class="tr-card">
+      <div class="tr-title">قيمة العقود المُوقّعة شهرياً <span style="font-size:10px;color:var(--text3);font-weight:700">مجموع القيم التعاقدية</span></div>
+      ${_barChartSvg(signedValue,COLORS.regular,fmtValue)}
+    </div>`;
+}
+window.renderTrends=renderTrends;
+
 function setFilter(f,btn){
   filter=f;
   document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
