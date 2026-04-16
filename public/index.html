@@ -246,14 +246,12 @@ body.dark .card-notes{color:var(--preceipt);}
 body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue-rotate(340deg) brightness(1.8);opacity:.08;}
 .theme-btn{background:var(--glass);border:1px solid var(--gborder);color:var(--text3);width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
 .theme-btn:hover{background:var(--glass2);border-color:var(--gborder2);color:var(--text);}
-.copy-btn{display:inline-flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;padding:3px;color:var(--text4);opacity:0;transition:opacity .15s,color .15s,transform .1s;line-height:0;border-radius:4px;flex-shrink:0;}
-.copy-btn svg{width:12px;height:12px;display:block;}
-.copy-btn:hover{color:var(--advanced);transform:scale(1.15);}
-.copy-btn.copied{color:var(--advanced);opacity:1!important;}
-.dp-item:hover .copy-btn,.date-item:hover .copy-btn,.dp-action:hover .copy-btn,.dp-brief-box:hover .copy-btn,.dp-notes-box:hover .copy-btn{opacity:.6;}
-.dp-item:hover .copy-btn:hover,.date-item:hover .copy-btn:hover,.dp-action:hover .copy-btn:hover,.dp-brief-box:hover .copy-btn:hover,.dp-notes-box:hover .copy-btn:hover{opacity:1;}
-.dp-item,.date-item{position:relative;}
-.dp-item .field-row,.date-item .field-row{display:flex;align-items:center;justify-content:space-between;gap:4px;}
+.copy-btn{position:absolute;top:4px;left:4px;z-index:3;display:inline-flex;align-items:center;justify-content:center;background:var(--glass);border:1px solid var(--gborder);cursor:pointer;padding:3px;color:var(--text3);opacity:0;transition:opacity .15s,color .15s,background .15s;line-height:0;border-radius:5px;}
+.copy-btn svg{width:11px;height:11px;display:block;}
+.copy-btn:hover{color:#fff;background:var(--advanced);border-color:var(--advanced);}
+.copy-btn.copied{color:#fff;background:var(--advanced);border-color:var(--advanced);opacity:1!important;}
+.dp-item:hover .copy-btn,.date-item:hover .copy-btn,.dp-action:hover .copy-btn,.dp-brief-box:hover .copy-btn,.dp-notes-box:hover .copy-btn{opacity:.9;}
+.dp-item,.date-item,.dp-action,.dp-brief-box,.dp-notes-box{position:relative;}
 .copy-toast{position:fixed;bottom:30px;right:30px;background:var(--advanced);color:#fff;padding:10px 20px;border-radius:10px;font-size:12px;font-weight:700;box-shadow:0 6px 20px var(--shadow);z-index:9999;opacity:0;transform:translateY(20px);transition:all .25s;pointer-events:none;}
 .copy-toast.show{opacity:1;transform:translateY(0);}
 @media print{.copy-btn,.copy-toast{display:none!important;}}
@@ -898,7 +896,7 @@ function row(lbl,val,full,safe){
   const ornKeys=['tawq','takatuf','arda','sanbala','shajara','qit','jabal'];
   const orn=ORNS[ornKeys[_rowOrnIdx%ornKeys.length]];
   _rowOrnIdx++;
-  return `<div class="dp-item${full?' full':''}" data-pf="${escapeHtml(lbl)}"><img class="dp-item-orn" loading="lazy" src="${orn}"><div class="di-lbl">${lockBtn(lbl)}${escapeHtml(lbl)}</div><div class="field-row"><div class="di-val" style="flex:1">${v}</div>${copyBtn(rawForCopy)}</div></div>`;
+  return `<div class="dp-item${full?' full':''}" data-pf="${escapeHtml(lbl)}"><img class="dp-item-orn" loading="lazy" src="${orn}">${copyBtn(rawForCopy)}<div class="di-lbl">${lockBtn(lbl)}${escapeHtml(lbl)}</div><div class="di-val">${v}</div></div>`;
 }
 
 function openDetail(id){
@@ -906,7 +904,7 @@ function openDetail(id){
   const p=projects.find(x=>x.id===id);if(!p)return;
   _currentDetailId=id;
   const C=COLORS[p.status];
-  const dtrow=(l,v)=>{if(!v||isFieldHidden(l))return '';return `<div class="date-item" data-pf="${escapeHtml(l)}"><div class="date-lbl">${lockBtn(l)}${escapeHtml(l)}</div><div class="field-row" style="justify-content:center"><div class="date-val">${v}</div>${copyBtn(v)}</div></div>`;};
+  const dtrow=(l,v)=>{if(!v||isFieldHidden(l))return '';return `<div class="date-item" data-pf="${escapeHtml(l)}">${copyBtn(v)}<div class="date-lbl">${lockBtn(l)}${escapeHtml(l)}</div><div class="date-val">${v}</div></div>`;};
 
   const orn=CARD_ORNS[p.id%CARD_ORNS.length];
   document.getElementById('detailPanel').innerHTML=`
@@ -943,20 +941,23 @@ function openDetail(id){
       </div>`:''}
 
       ${p.last_action&&!isFieldHidden('آخر إجراء')?`
-      <div class="dp-action" data-pf="آخر إجراء" style="position:relative">
-        <div class="dp-action-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:4px">${lockBtn('آخر إجراء')}<span style="flex:1">آخر اجراء</span>${copyBtn(p.last_action)}</div>
+      <div class="dp-action" data-pf="آخر إجراء">
+        ${copyBtn(p.last_action)}
+        <div class="dp-action-lbl">${lockBtn('آخر إجراء')}آخر اجراء</div>
         <div class="dp-action-txt">${escapeHtml(p.last_action)}</div>
       </div>`:''}
 
       ${p.project_brief&&!isFieldHidden('نبذة سريعة عن حالة المشروع')?`
-      <div class="dp-brief-box" data-pf="نبذة سريعة عن حالة المشروع" style="position:relative">
-        <div class="dp-brief-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:4px">${lockBtn('نبذة سريعة عن حالة المشروع')}<span style="flex:1">نبذة سريعة عن حالة المشروع</span>${copyBtn(p.project_brief)}</div>
+      <div class="dp-brief-box" data-pf="نبذة سريعة عن حالة المشروع">
+        ${copyBtn(p.project_brief)}
+        <div class="dp-brief-lbl">${lockBtn('نبذة سريعة عن حالة المشروع')}نبذة سريعة عن حالة المشروع</div>
         <div class="dp-brief-txt">${escapeHtml(p.project_brief)}</div>
       </div>`:''}
 
       ${p.notes&&!isFieldHidden('الملاحظات')?`
-      <div class="dp-notes-box" data-pf="الملاحظات" style="position:relative">
-        <div class="dp-notes-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:4px">${lockBtn('الملاحظات')}<span style="flex:1">الملاحظات</span>${copyBtn(p.notes)}</div>
+      <div class="dp-notes-box" data-pf="الملاحظات">
+        ${copyBtn(p.notes)}
+        <div class="dp-notes-lbl">${lockBtn('الملاحظات')}الملاحظات</div>
         <div class="dp-notes-txt">${escapeHtml(p.notes)}</div>
       </div>`:''}
 
