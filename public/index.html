@@ -239,6 +239,19 @@ body.dark .card-notes{color:var(--preceipt);}
 body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue-rotate(340deg) brightness(1.8);opacity:.08;}
 .theme-btn{background:var(--glass);border:1px solid var(--gborder);color:var(--text3);width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
 .theme-btn:hover{background:var(--glass2);border-color:var(--gborder2);color:var(--text);}
+.copy-btn{display:inline-flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;padding:3px;color:var(--text4);opacity:0;transition:opacity .15s,color .15s,transform .1s;line-height:0;border-radius:4px;flex-shrink:0;}
+.copy-btn svg{width:12px;height:12px;display:block;}
+.copy-btn:hover{color:var(--advanced);transform:scale(1.15);}
+.copy-btn.copied{color:var(--advanced);opacity:1!important;}
+.dp-item:hover .copy-btn,.date-item:hover .copy-btn,.dp-action:hover .copy-btn,.dp-brief-box:hover .copy-btn,.dp-notes-box:hover .copy-btn{opacity:.6;}
+.dp-item:hover .copy-btn:hover,.date-item:hover .copy-btn:hover,.dp-action:hover .copy-btn:hover,.dp-brief-box:hover .copy-btn:hover,.dp-notes-box:hover .copy-btn:hover{opacity:1;}
+.dp-item,.date-item{position:relative;}
+.dp-item .field-row,.date-item .field-row{display:flex;align-items:center;justify-content:space-between;gap:4px;}
+.copy-toast{position:fixed;bottom:30px;right:30px;background:var(--advanced);color:#fff;padding:10px 20px;border-radius:10px;font-size:12px;font-weight:700;box-shadow:0 6px 20px var(--shadow);z-index:9999;opacity:0;transform:translateY(20px);transition:all .25s;pointer-events:none;}
+.copy-toast.show{opacity:1;transform:translateY(0);}
+@media print{.copy-btn,.copy-toast{display:none!important;}}
+.fbtn .f-count{display:inline-block;margin-right:4px;padding:1px 6px;border-radius:8px;background:var(--gborder);color:var(--text3);font-size:9px;font-weight:800;min-width:16px;}
+.fbtn.active .f-count{background:rgba(255,255,255,.25);color:#fff;}
 .field-lock{display:inline-flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;padding:2px;margin-left:4px;color:var(--text4);opacity:.45;transition:opacity .15s,color .15s,transform .1s;vertical-align:middle;line-height:0;}
 .field-lock svg{width:11px;height:11px;display:block;}
 .field-lock:hover{opacity:1;color:var(--advanced);transform:scale(1.15);}
@@ -341,14 +354,14 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
         <span class="search-icon">&#128269;</span>
         <button class="search-clear" id="searchClear" onmousedown="event.preventDefault()" onclick="clearSearch()">&#x2715;</button>
       </div>
-      <button class="fbtn active" onclick="setFilter('all',this)">الكل</button>
-      <button class="fbtn" onclick="setFilter('advanced',this)">متقدم</button>
-      <button class="fbtn" onclick="setFilter('regular',this)">منتظم</button>
-      <button class="fbtn" onclick="setFilter('pending',this)">قيد الترسية</button>
-      <button class="fbtn" onclick="setFilter('stopped',this)">متوقف</button>
-      <button class="fbtn" onclick="setFilter('late',this)">متأخر</button>
-      <button class="fbtn" onclick="setFilter('stalled',this)">متعثر</button>
-      <button class="fbtn" onclick="setFilter('preceipt',this)">تم الاستلام ابتدائيا</button>
+      <button class="fbtn active" data-filter="all" onclick="setFilter('all',this)">الكل<span class="f-count" data-count="all">0</span></button>
+      <button class="fbtn" data-filter="advanced" onclick="setFilter('advanced',this)">متقدم<span class="f-count" data-count="advanced">0</span></button>
+      <button class="fbtn" data-filter="regular" onclick="setFilter('regular',this)">منتظم<span class="f-count" data-count="regular">0</span></button>
+      <button class="fbtn" data-filter="pending" onclick="setFilter('pending',this)">قيد الترسية<span class="f-count" data-count="pending">0</span></button>
+      <button class="fbtn" data-filter="stopped" onclick="setFilter('stopped',this)">متوقف<span class="f-count" data-count="stopped">0</span></button>
+      <button class="fbtn" data-filter="late" onclick="setFilter('late',this)">متأخر<span class="f-count" data-count="late">0</span></button>
+      <button class="fbtn" data-filter="stalled" onclick="setFilter('stalled',this)">متعثر<span class="f-count" data-count="stalled">0</span></button>
+      <button class="fbtn" data-filter="preceipt" onclick="setFilter('preceipt',this)">تم الاستلام ابتدائيا<span class="f-count" data-count="preceipt">0</span></button>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
@@ -368,6 +381,7 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 <div class="overlay" id="detailOverlay">
   <div class="detail-panel" id="detailPanel"></div>
 </div>
+<div class="copy-toast" id="copyToast" role="status" aria-live="polite">&#10003; تم النسخ</div>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
@@ -580,7 +594,12 @@ function fmt(n){
 function formatDateTime(d){const dd=new Date(d);const y=dd.getFullYear(),m=dd.getMonth()+1,day=dd.getDate();let h=dd.getHours(),mi=dd.getMinutes();const ampm=h>=12?'م':'ص';h=h%12||12;return y+'/'+m+'/'+day+' '+h+':'+(mi<10?'0':'')+mi+' '+ampm;}
 async function updateLastModified(){const now=new Date().toISOString();try{await setDoc(doc(db,'meta','lastUpdate'),{timestamp:now});localStorage.setItem('lastUpdate',now);}catch(e){}showLastUpdate(now);}
 function showLastUpdate(ts){if(!ts)return;const el=document.getElementById('lastUpdate');if(el)el.textContent='آخر تحديث للبيانات: '+formatDateTime(ts);}
-function renderAll(){try{renderKPI();}catch(e){}try{renderAlert();}catch(e){}try{renderDonut();}catch(e){}try{renderBars();}catch(e){}try{renderBudget();}catch(e){}try{renderGrid();}catch(e){}showLastUpdate(localStorage.getItem('lastUpdate'));}
+function updateFilterCounts(){
+  const cnt={all:projects.length,advanced:0,regular:0,pending:0,stopped:0,late:0,stalled:0,preceipt:0};
+  projects.forEach(p=>{if(cnt.hasOwnProperty(p.status))cnt[p.status]++;});
+  document.querySelectorAll('.f-count').forEach(el=>{const k=el.getAttribute('data-count');if(cnt.hasOwnProperty(k))el.textContent=cnt[k];});
+}
+function renderAll(){try{renderKPI();}catch(e){}try{renderAlert();}catch(e){}try{renderDonut();}catch(e){}try{renderBars();}catch(e){}try{renderBudget();}catch(e){}try{renderGrid();}catch(e){}try{updateFilterCounts();}catch(e){}showLastUpdate(localStorage.getItem('lastUpdate'));}
 
 function renderKPI(){
   const total=projects.length;
@@ -721,7 +740,14 @@ function renderBudget(){
   `;
 }
 
-function handleSearch(q){searchQuery=q.trim();document.getElementById('searchClear').style.display=searchQuery?'block':'none';renderGrid();}
+let _searchTimer=null;
+function handleSearch(q){
+  // إظهار زر المسح فوراً (بدون انتظار)
+  document.getElementById('searchClear').style.display=q.trim()?'block':'none';
+  // تأخير الفلترة الفعلية لتحسين الأداء
+  clearTimeout(_searchTimer);
+  _searchTimer=setTimeout(()=>{searchQuery=q.trim();renderGrid();},150);
+}
 function clearSearch(){document.getElementById('searchInput').value='';handleSearch('');}
 function setSort(field,btn){if(sortBy===field){sortDir*=-1;}else{sortBy=field;sortDir=field==='id'?1:-1;}document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');btn.textContent=btn.textContent.replace(/ [▲▼]/,'')+(field==='id'?'':sortDir>0?' ▲':' ▼');renderAll();}
 window.handleSearch=handleSearch;
@@ -823,14 +849,50 @@ async function quickToggleHide(field){
 }
 window.quickToggleHide=quickToggleHide;
 
+// زر نسخ صغير يظهر عند hover
+const COPY_SVG='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M3 11V3.5A1.5 1.5 0 0 1 4.5 2H11"/></svg>';
+const CHECK_SVG='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5L6.5 12L13 4.5"/></svg>';
+function copyBtn(rawVal){
+  if(rawVal==null||rawVal==='')return '';
+  // نخزّن القيمة كـ base64 في data-copy لتجنب مشاكل الاقتباس
+  let encoded='';
+  try{encoded=btoa(unescape(encodeURIComponent(String(rawVal))));}catch(e){encoded='';}
+  return `<button type="button" class="copy-btn" data-copy="${encoded}" onclick="event.stopPropagation();copyFieldValue(this)" title="نسخ" aria-label="نسخ">${COPY_SVG}</button>`;
+}
+function copyFieldValue(btn){
+  try{
+    const raw=btn.getAttribute('data-copy')||'';
+    const val=decodeURIComponent(escape(atob(raw)));
+    const write=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(val):Promise.reject('no clipboard');
+    write.then(()=>{
+      btn.classList.add('copied');btn.innerHTML=CHECK_SVG;
+      const toast=document.getElementById('copyToast');if(toast){toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1400);}
+      setTimeout(()=>{btn.classList.remove('copied');btn.innerHTML=COPY_SVG;},1200);
+    }).catch(()=>{
+      // Fallback: تحديد النص يدوياً
+      const ta=document.createElement('textarea');ta.value=val;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);
+      const toast=document.getElementById('copyToast');if(toast){toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1400);}
+    });
+  }catch(e){console.error('copyFieldValue',e);}
+}
+window.copyFieldValue=copyFieldValue;
+
+// يستخرج النص الخام من قيمة مغلّفة بـ HTML (للنسخ)
+function stripHtmlForCopy(s){
+  if(s==null)return '';
+  const tmp=document.createElement('div');tmp.innerHTML=String(s);
+  return (tmp.textContent||tmp.innerText||'').trim();
+}
+
 function row(lbl,val,full,safe){
   if(!val) return '';
   if(isFieldHidden(lbl)) return '';
   const v=safe?val:escapeHtml(val);
+  const rawForCopy=safe?stripHtmlForCopy(val):String(val);
   const ornKeys=['tawq','takatuf','arda','sanbala','shajara','qit','jabal'];
   const orn=ORNS[ornKeys[_rowOrnIdx%ornKeys.length]];
   _rowOrnIdx++;
-  return `<div class="dp-item${full?' full':''}" data-pf="${escapeHtml(lbl)}"><img class="dp-item-orn" src="${orn}"><div class="di-lbl">${lockBtn(lbl)}${escapeHtml(lbl)}</div><div class="di-val">${v}</div></div>`;
+  return `<div class="dp-item${full?' full':''}" data-pf="${escapeHtml(lbl)}"><img class="dp-item-orn" src="${orn}"><div class="di-lbl">${lockBtn(lbl)}${escapeHtml(lbl)}</div><div class="field-row"><div class="di-val" style="flex:1">${v}</div>${copyBtn(rawForCopy)}</div></div>`;
 }
 
 function openDetail(id){
@@ -838,7 +900,7 @@ function openDetail(id){
   const p=projects.find(x=>x.id===id);if(!p)return;
   _currentDetailId=id;
   const C=COLORS[p.status];
-  const dtrow=(l,v)=>{if(!v||isFieldHidden(l))return '';return `<div class="date-item" data-pf="${escapeHtml(l)}"><div class="date-lbl">${lockBtn(l)}${escapeHtml(l)}</div><div class="date-val">${v}</div></div>`;};
+  const dtrow=(l,v)=>{if(!v||isFieldHidden(l))return '';return `<div class="date-item" data-pf="${escapeHtml(l)}"><div class="date-lbl">${lockBtn(l)}${escapeHtml(l)}</div><div class="field-row" style="justify-content:center"><div class="date-val">${v}</div>${copyBtn(v)}</div></div>`;};
 
   const orn=CARD_ORNS[p.id%CARD_ORNS.length];
   document.getElementById('detailPanel').innerHTML=`
@@ -875,20 +937,20 @@ function openDetail(id){
       </div>`:''}
 
       ${p.last_action&&!isFieldHidden('آخر إجراء')?`
-      <div class="dp-action" data-pf="آخر إجراء">
-        <div class="dp-action-lbl">${lockBtn('آخر إجراء')}آخر اجراء</div>
+      <div class="dp-action" data-pf="آخر إجراء" style="position:relative">
+        <div class="dp-action-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:4px">${lockBtn('آخر إجراء')}<span style="flex:1">آخر اجراء</span>${copyBtn(p.last_action)}</div>
         <div class="dp-action-txt">${escapeHtml(p.last_action)}</div>
       </div>`:''}
 
       ${p.project_brief&&!isFieldHidden('نبذة سريعة عن حالة المشروع')?`
-      <div class="dp-brief-box" data-pf="نبذة سريعة عن حالة المشروع">
-        <div class="dp-brief-lbl">${lockBtn('نبذة سريعة عن حالة المشروع')}نبذة سريعة عن حالة المشروع</div>
+      <div class="dp-brief-box" data-pf="نبذة سريعة عن حالة المشروع" style="position:relative">
+        <div class="dp-brief-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:4px">${lockBtn('نبذة سريعة عن حالة المشروع')}<span style="flex:1">نبذة سريعة عن حالة المشروع</span>${copyBtn(p.project_brief)}</div>
         <div class="dp-brief-txt">${escapeHtml(p.project_brief)}</div>
       </div>`:''}
 
       ${p.notes&&!isFieldHidden('الملاحظات')?`
-      <div class="dp-notes-box" data-pf="الملاحظات">
-        <div class="dp-notes-lbl">${lockBtn('الملاحظات')}الملاحظات</div>
+      <div class="dp-notes-box" data-pf="الملاحظات" style="position:relative">
+        <div class="dp-notes-lbl" style="display:flex;align-items:center;justify-content:space-between;gap:4px">${lockBtn('الملاحظات')}<span style="flex:1">الملاحظات</span>${copyBtn(p.notes)}</div>
         <div class="dp-notes-txt">${escapeHtml(p.notes)}</div>
       </div>`:''}
 
@@ -992,8 +1054,8 @@ const safeLogo=escapeHtml(logoSrc);
 const safeSig=escapeHtml(sigSrc);
 const header='<div class="print-header"><img src="'+safeLogo+'" alt=""><div class="print-header-title">تقرير مشروع - '+safeName+'</div><div class="print-header-sig"><img src="'+safeSig+'" alt=""></div></div><div class="print-date">تاريخ الطباعة: '+escapeHtml(dateStr)+'</div>';
 const clone=panel.cloneNode(true);
-// إزالة أزرار قفل الإخفاء من نسخة الطباعة
-clone.querySelectorAll('.field-lock').forEach(el=>el.remove());
+// إزالة أزرار قفل الإخفاء ونسخ الحقل من نسخة الطباعة
+clone.querySelectorAll('.field-lock,.copy-btn').forEach(el=>el.remove());
 // إزالة العناصر التي اختار المستخدم استثناءها من الطباعة
 clone.querySelectorAll('[data-pf]').forEach(el=>{const k=el.getAttribute('data-pf');if(_printDetailExcluded.has(k))el.remove();});
 clone.querySelectorAll('.dp-section').forEach(el=>{const grid=el.querySelector('.dp-grid,.dates-strip');if(grid&&!grid.children.length)el.remove();else if(!grid&&!el.querySelector('.dp-item,.date-item,.dp-letters'))el.remove();});
@@ -2102,6 +2164,40 @@ function applyThemeAssets(){
 // الافتراضي دائماً فاتح - الثيم يتغير فقط بعد تسجيل الدخول حسب تفضيل المستخدم
 applyThemeAssets();
 window.toggleTheme=toggleTheme;
+
+// ─── اختصارات الكيبورد ───
+// Escape: إغلاق المودال، أو مسح البحث لو كان الحقل مركّزاً
+// ← →: التنقل بين المشاريع عند فتح مشروع (RTL: → سابق، ← تالي)
+document.addEventListener('keydown',function(e){
+  const overlay=document.getElementById('detailOverlay');
+  const overlayOpen=overlay&&overlay.classList.contains('open');
+  const searchInput=document.getElementById('searchInput');
+  const isTyping=document.activeElement&&(document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='TEXTAREA'||document.activeElement.tagName==='SELECT');
+
+  if(e.key==='Escape'){
+    if(overlayOpen){e.preventDefault();closeDetail();return;}
+    if(document.activeElement===searchInput&&searchInput.value){e.preventDefault();clearSearch();return;}
+    return;
+  }
+
+  // أسهم التنقل بين المشاريع — تعمل فقط عند فتح مشروع وعدم الكتابة في حقل
+  if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&overlayOpen&&!isTyping&&_currentDetailId!=null){
+    // تجاهل لو الشاشة المعروضة ليست تفاصيل مشروع (مثلاً شاشة إعدادات الطباعة)
+    const panel=document.getElementById('detailPanel');
+    if(!panel.querySelector('.dp-prog,.dp-grid'))return;
+    // قائمة المشاريع المرئية حالياً (مصفّاة ومفروزة)
+    let list=filter==='all'?[...projects]:projects.filter(p=>p.status===filter);
+    if(searchQuery){const q=searchQuery.toLowerCase();list=list.filter(p=>(p.name||'').toLowerCase().includes(q)||(p.contractor||'').toLowerCase().includes(q)||(p.category||'').toLowerCase().includes(q)||(p.pm||'').toLowerCase().includes(q)||(p.contract_no||'').toLowerCase().includes(q));}
+    if(sortBy!=='id'){list.sort((a,b)=>{let av=a[sortBy],bv=b[sortBy];if(sortBy==='date_end'){av=av||'';bv=bv||'';return sortDir*(av<bv?-1:av>bv?1:0);}return sortDir*((av||0)-(bv||0));});}
+    const idx=list.findIndex(p=>p.id===_currentDetailId);
+    if(idx<0)return;
+    // في RTL: السهم الأيمن = السابق، الأيسر = التالي
+    let newIdx;
+    if(e.key==='ArrowRight')newIdx=idx-1;
+    else newIdx=idx+1;
+    if(newIdx>=0&&newIdx<list.length){e.preventDefault();openDetail(list[newIdx].id);}
+  }
+});
 
 </script>
 </body>
