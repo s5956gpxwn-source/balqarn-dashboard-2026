@@ -25,6 +25,31 @@ service cloud.firestore {
       return v == null || v is number;
     }
 
+    // ─── دوال تحقق موسّعة (#17) ───
+    // السماح بالغياب أو القيمة الفارغة، والتحقق من الصيغة فقط عند وجود قيمة
+    function isStrMax(data, key, max) {
+      return !(key in data) || (data[key] is string && data[key].size() <= max);
+    }
+    function isEmailOrEmpty(data, key) {
+      return !(key in data) || data[key] == null || data[key] == ''
+        || (data[key] is string && data[key].size() <= 200
+            && data[key].matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]{2,}$'));
+    }
+    function isPhoneOrEmpty(data, key) {
+      // نتحقق من الطول والصيغة الأساسية (أرقام + مسافات + - + () + +)
+      // التحقق الدقيق يبقى في العميل لمرونة الصيغ
+      return !(key in data) || data[key] == null || data[key] == ''
+        || (data[key] is string && data[key].size() >= 7 && data[key].size() <= 25);
+    }
+    function isNumInRange(data, key, min, max) {
+      return !(key in data) || data[key] == null
+        || (data[key] is number && data[key] >= min && data[key] <= max);
+    }
+    function isPosNumOrMissing(data, key) {
+      return !(key in data) || data[key] == null
+        || (data[key] is number && data[key] >= 0);
+    }
+
     // ─── المستخدمون ───
     // قراءة وثيقة المستخدم الخاصة بنفسه فقط
     // التعديل محدود بحقلين: theme و printSettings مع تحقق من النوع والحجم
@@ -39,17 +64,17 @@ service cloud.firestore {
     }
 
     // ─── المشاريع ───
-    // قراءة: لأي مستخدم موثّق
-    // كتابة: للأدمن فقط مع تحقق من بنية البيانات
+    // قراءة: لأي مستخدم موثّق (الحقول الحساسة معزولة في subcollection أدناه)
+    // كتابة: للأدمن فقط مع تحقق موسّع من بنية البيانات
     match /projects/{projectId} {
       allow read: if isVerified();
 
       allow delete: if isAdmin();
 
-      // التحقق من الحقول الجوهرية فقط — حقول النصوص الحرة (phase, contractor, ...)
-      // قد تأتي من Excel كأرقام أحياناً، فلا نشددها هنا. الحماية الجوهرية:
-      // (1) عدد الحقول محدود (2) اسم نصي وغير فارغ (3) status من القائمة المسموحة
-      // (4) progress و value_num أرقام في نطاق منطقي
+      // التحقق الجوهري + التحقق الموسّع (#17):
+      // الحقول الرئيسية: عدد، اسم، حالة، أرقام في نطاقها
+      // الحقول النصية الحرة: أطوال قصوى فقط (البيانات قد تأتي من Excel بصيغ متنوعة)
+      // الحقول الحساسة (إيميل، جوال): صيغة مبدئية
       allow create, update: if isAdmin()
         && request.resource.data.keys().size() < 200
         && request.resource.data.name is string
@@ -57,11 +82,71 @@ service cloud.firestore {
         && request.resource.data.name.size() < 500
         && validStatus(request.resource.data.status)
         && (!('progress' in request.resource.data) || (request.resource.data.progress is number && request.resource.data.progress >= 0 && request.resource.data.progress <= 100))
-        && (!('value_num' in request.resource.data) || (request.resource.data.value_num is number && request.resource.data.value_num >= 0));
+        && (!('value_num' in request.resource.data) || (request.resource.data.value_num is number && request.resource.data.value_num >= 0))
+        // أطوال قصوى لحقول نصية طويلة (ملاحظات، خطابات، وصف)
+        && isStrMax(request.resource.data, 'notes', 20000)
+        && isStrMax(request.resource.data, 'letters', 20000)
+        && isStrMax(request.resource.data, 'description', 10000)
+        && isStrMax(request.resource.data, 'project_brief', 10000)
+        && isStrMax(request.resource.data, 'last_action', 5000)
+        // أطوال معقولة لحقول نصية عادية
+        && isStrMax(request.resource.data, 'phase', 500)
+        && isStrMax(request.resource.data, 'sub_phase', 500)
+        && isStrMax(request.resource.data, 'category', 500)
+        && isStrMax(request.resource.data, 'category_sub', 500)
+        && isStrMax(request.resource.data, 'contractor', 500)
+        && isStrMax(request.resource.data, 'pm', 300)
+        && isStrMax(request.resource.data, 'supervisor', 300)
+        && isStrMax(request.resource.data, 'consultant', 300)
+        && isStrMax(request.resource.data, 'status_raw', 300)
+        // التحقق من صيغ الإيميل والجوال (في الحقول الحساسة — قبل أو بعد نقلها للـ subcollection)
+        && isEmailOrEmpty(request.resource.data, 'pm_email')
+        && isEmailOrEmpty(request.resource.data, 'contractor_email')
+        && isPhoneOrEmpty(request.resource.data, 'pm_phone')
+        && isPhoneOrEmpty(request.resource.data, 'contractor_phone')
+        && isPhoneOrEmpty(request.resource.data, 'consultant_phone')
+        && isPhoneOrEmpty(request.resource.data, 'dept_manager_phone')
+        // نطاقات منطقية للحقول الرقمية (نسب مئوية ومدد)
+        && isNumInRange(request.resource.data, 'tax_pct', -100, 1000)
+        && isNumInRange(request.resource.data, 'increase_pct', -100, 1000)
+        && isNumInRange(request.resource.data, 'discount_pct', -100, 1000)
+        && isNumInRange(request.resource.data, 'elapsed_pct', -100, 10000)
+        && isNumInRange(request.resource.data, 'elapsed_ext_pct', -100, 10000)
+        && isNumInRange(request.resource.data, 'delay_pct', -100, 10000)
+        && isNumInRange(request.resource.data, 'duration_days', 0, 100000)
+        && isNumInRange(request.resource.data, 'duration_after_ext', 0, 100000)
+        && isNumInRange(request.resource.data, 'correction_days', -100000, 100000)
+        && isNumInRange(request.resource.data, 'stops', 0, 10000)
+        && isNumInRange(request.resource.data, 'warnings_count', 0, 10000)
+        && isPosNumOrMissing(request.resource.data, 'value_adjusted')
+        && isPosNumOrMissing(request.resource.data, 'boq_value')
+        && isPosNumOrMissing(request.resource.data, 'guarantee_value')
+        && isPosNumOrMissing(request.resource.data, 'advance_payment');
+
+      // ─── الحقول الحساسة (#13) ───
+      // مجموعة فرعية محمية: الأدمن وحده يقرأ ويكتب
+      // المستخدم العادي لا يستطيع قراءة أي شيء من هنا — الحماية الحقيقية
+      match /private/{privateDocId} {
+        allow read, write: if isAdmin()
+          && (request.method == 'delete' || (
+            request.resource.data.keys().size() < 100
+            && isEmailOrEmpty(request.resource.data, 'pm_email')
+            && isEmailOrEmpty(request.resource.data, 'contractor_email')
+            && isPhoneOrEmpty(request.resource.data, 'pm_phone')
+            && isPhoneOrEmpty(request.resource.data, 'contractor_phone')
+            && isPhoneOrEmpty(request.resource.data, 'consultant_phone')
+            && isPhoneOrEmpty(request.resource.data, 'dept_manager_phone')
+            && isStrMax(request.resource.data, 'contractor_cr', 200)
+            && isStrMax(request.resource.data, 'contractor_address', 1000)
+            && isStrMax(request.resource.data, 'contractor_engineer', 300)
+            && isStrMax(request.resource.data, 'dept_manager', 300)
+            && isStrMax(request.resource.data, 'dept_manager_title', 300)
+          ));
+      }
     }
 
     // ─── بيانات وصفية ───
-    // hiddenFields: قائمة نصوص (ميزة UI فقط — ليست أمناً حقيقياً)
+    // hiddenFields: قائمة نصوص — بعد #13 تحدّد أي الحقول تُحفظ في الـ subcollection الحساسة
     // lastUpdate: ختم زمني نصي
     match /meta/{docId} {
       allow read: if isVerified();
