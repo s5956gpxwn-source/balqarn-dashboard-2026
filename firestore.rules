@@ -64,8 +64,8 @@ service cloud.firestore {
     }
 
     // ─── المشاريع ───
-    // قراءة: لأي مستخدم موثّق (الحقول الحساسة معزولة في subcollection أدناه)
-    // كتابة: للأدمن فقط مع تحقق موسّع من بنية البيانات
+    // قراءة: لأي مستخدم موثّق
+    // كتابة: للأدمن فقط مع تحقق موسّع من بنية البيانات (#17)
     match /projects/{projectId} {
       allow read: if isVerified();
 
@@ -99,7 +99,7 @@ service cloud.firestore {
         && isStrMax(request.resource.data, 'supervisor', 300)
         && isStrMax(request.resource.data, 'consultant', 300)
         && isStrMax(request.resource.data, 'status_raw', 300)
-        // التحقق من صيغ الإيميل والجوال (في الحقول الحساسة — قبل أو بعد نقلها للـ subcollection)
+        // التحقق من صيغ الإيميل والجوال
         && isEmailOrEmpty(request.resource.data, 'pm_email')
         && isEmailOrEmpty(request.resource.data, 'contractor_email')
         && isPhoneOrEmpty(request.resource.data, 'pm_phone')
@@ -122,31 +122,10 @@ service cloud.firestore {
         && isPosNumOrMissing(request.resource.data, 'boq_value')
         && isPosNumOrMissing(request.resource.data, 'guarantee_value')
         && isPosNumOrMissing(request.resource.data, 'advance_payment');
-
-      // ─── الحقول الحساسة (#13) ───
-      // مجموعة فرعية محمية: الأدمن وحده يقرأ ويكتب
-      // المستخدم العادي لا يستطيع قراءة أي شيء من هنا — الحماية الحقيقية
-      match /private/{privateDocId} {
-        allow read, write: if isAdmin()
-          && (request.method == 'delete' || (
-            request.resource.data.keys().size() < 100
-            && isEmailOrEmpty(request.resource.data, 'pm_email')
-            && isEmailOrEmpty(request.resource.data, 'contractor_email')
-            && isPhoneOrEmpty(request.resource.data, 'pm_phone')
-            && isPhoneOrEmpty(request.resource.data, 'contractor_phone')
-            && isPhoneOrEmpty(request.resource.data, 'consultant_phone')
-            && isPhoneOrEmpty(request.resource.data, 'dept_manager_phone')
-            && isStrMax(request.resource.data, 'contractor_cr', 200)
-            && isStrMax(request.resource.data, 'contractor_address', 1000)
-            && isStrMax(request.resource.data, 'contractor_engineer', 300)
-            && isStrMax(request.resource.data, 'dept_manager', 300)
-            && isStrMax(request.resource.data, 'dept_manager_title', 300)
-          ));
-      }
     }
 
     // ─── بيانات وصفية ───
-    // hiddenFields: قائمة نصوص — بعد #13 تحدّد أي الحقول تُحفظ في الـ subcollection الحساسة
+    // hiddenFields: قائمة نصوص (ميزة UI فقط — ليست أمناً حقيقياً)
     // lastUpdate: ختم زمني نصي
     match /meta/{docId} {
       allow read: if isVerified();

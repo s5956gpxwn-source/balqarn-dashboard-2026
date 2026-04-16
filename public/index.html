@@ -43,9 +43,6 @@
 
   ⚠️ تحذير: إن حدّثت الإصدار لاحقاً (مثلاً Firebase 11.7.0 بدل 11.6.0) يجب إعادة
   حساب جميع الـ hashes وإلا سيفشل تحميل الموقع.
-
-  ملاحظة: لم يُحسب الـ hashes تلقائياً هنا لأن البيئة التي وُلّد فيها الكود
-  لا تسمح بالوصول إلى CDNs خارجية. احسبها محلياً وضعها هنا.
 -->
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js">
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js">
@@ -529,7 +526,7 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import{getFirestore,collection,collectionGroup,getDocs,doc,getDoc,setDoc,deleteDoc,writeBatch,onSnapshot}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+import{getFirestore,collection,getDocs,doc,getDoc,setDoc,deleteDoc,writeBatch,onSnapshot}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
 // ⚠️ ضع إعدادات Firebase الخاصة بمشروعك هنا
 const firebaseConfig={
@@ -648,152 +645,23 @@ let _busy=false;
 let _unsubProjects=null;
 let _unsubHidden=null;
 let _unsubLastUpdate=null;
-let _unsubPrivate=null;
 function _unsubAll(){
-  [_unsubProjects,_unsubHidden,_unsubLastUpdate,_unsubPrivate].forEach(fn=>{try{if(fn)fn();}catch(e){}});
-  _unsubProjects=_unsubHidden=_unsubLastUpdate=_unsubPrivate=null;
-}
-
-// ─── Session Idle Timeout (#19) ───
-// تسجيل خروج تلقائي بعد 30 دقيقة من عدم النشاط
-// الأحداث المراقَبة: النقر، الضغط على مفتاح، اللمس، التمرير
-const _IDLE_TIMEOUT_MS=30*60*1000; // 30 دقيقة
-const _IDLE_EVENTS=['mousedown','keydown','touchstart','scroll','click'];
-let _idleTimer=null;
-let _idleHandler=null;
-function _resetIdleTimer(){
-  if(_idleTimer)clearTimeout(_idleTimer);
-  _idleTimer=setTimeout(()=>{
-    if(!currentUser)return;
-    // إبلاغ ثم خروج
-    try{showAlert('انتهت الجلسة بسبب عدم النشاط (30 دقيقة). يرجى تسجيل الدخول مجدداً.');}catch(e){}
-    try{window.doLogout&&window.doLogout();}catch(e){}
-  },_IDLE_TIMEOUT_MS);
-}
-function _startIdleTracking(){
-  _stopIdleTracking();
-  _idleHandler=()=>_resetIdleTimer();
-  _IDLE_EVENTS.forEach(ev=>window.addEventListener(ev,_idleHandler,{passive:true,capture:true}));
-  _resetIdleTimer();
-}
-function _stopIdleTracking(){
-  if(_idleTimer){clearTimeout(_idleTimer);_idleTimer=null;}
-  if(_idleHandler){
-    _IDLE_EVENTS.forEach(ev=>{try{window.removeEventListener(ev,_idleHandler,{capture:true});}catch(e){}});
-    _idleHandler=null;
-  }
+  [_unsubProjects,_unsubHidden,_unsubLastUpdate].forEach(fn=>{try{if(fn)fn();}catch(e){}});
+  _unsubProjects=_unsubHidden=_unsubLastUpdate=null;
 }
 
 async function loadHiddenFields(){
   try{const d=await getDoc(doc(db,'meta','hiddenFields'));if(d.exists())hiddenFields=d.data().fields||[];}catch(e){hiddenFields=[];}
 }
 
-// ─── فصل الحقول الحساسة (#13) ───
-// الحقول في hiddenFields تُخزّن في subcollection محمي: projects/{id}/private/data
-// المستخدم العادي لا يصل إليها (قاعدة Firestore)
-// الأدمن يصل للاثنين ويراهما مدموجين في projects[]
-let _publicProjects=[]; // ما يُقرأ من projects/{id}
-let _privateMap={};     // projectId → {private fields} — للأدمن فقط
-
-// تقسيم كائن مشروع إلى قسمين بناءً على قائمة hiddenFields
-function _splitProjectFields(p,hidden){
-  const publicData={},privateData={};
-  const hiddenSet=new Set(hidden||[]);
-  for(const k in p){
-    if(!Object.prototype.hasOwnProperty.call(p,k))continue;
-    if(hiddenSet.has(k))privateData[k]=p[k];
-    else publicData[k]=p[k];
-  }
-  // الحقل id دائماً في الوثيقة الرئيسية
-  if('id' in p){publicData.id=p.id;delete privateData.id;}
-  return {publicData,privateData};
-}
-
-// إعادة بناء projects[] من الـ public + private
-function _mergeProjects(){
-  projects=_publicProjects.map(p=>{
-    const priv=_privateMap[p.id]||{};
-    return {...p,...priv};
-  });
-  projects.sort((a,b)=>(a.id||0)-(b.id||0));
-  try{sessionStorage.setItem('cachedProjects',JSON.stringify(projects));}catch(e){}
-}
-
-// كتابة مشروع: يقسّم ويستخدم batch
-async function _saveProjectSplit(p){
-  const {publicData,privateData}=_splitProjectFields(p,hiddenFields);
-  const batch=writeBatch(db);
-  const mainRef=doc(db,'projects',String(p.id));
-  const privRef=doc(db,'projects',String(p.id),'private','data');
-  batch.set(mainRef,publicData);
-  if(Object.keys(privateData).length>0){
-    batch.set(privRef,privateData);
-  }else{
-    // لا حقول حساسة — احذف الوثيقة الخاصة إن وُجدت
-    batch.delete(privRef);
-  }
-  await batch.commit();
-}
-
-// حذف مشروع: يحذف الوثيقة الرئيسية + الخاصة
-async function _deleteProjectSplit(id){
-  const batch=writeBatch(db);
-  batch.delete(doc(db,'projects',String(id)));
-  batch.delete(doc(db,'projects',String(id),'private','data'));
-  await batch.commit();
-}
-
-// ─── ترحيل الحقول بين public/private لكل المشاريع (#13) ───
-// يُستدعى عند:
-// (1) تغيير قائمة hiddenFields (إخفاء/إظهار حقل)
-// (2) ترحيل أولي عند أول تسجيل دخول للأدمن على النسخة الجديدة
-// يعيد توزيع الحقول بناءً على hiddenFields الحالية. batches متعددة حمايةً من حد 500 عملية.
-async function _migrateAllProjectsSplit(){
-  if(!currentUser||currentUser.role!=='admin')return;
-  if(!projects||!projects.length)return;
-  let batch=writeBatch(db);
-  let ops=0;
-  const BATCH_LIMIT=400; // هامش أمان تحت حد 500
-  for(const p of projects){
-    if(p.id==null)continue;
-    const {publicData,privateData}=_splitProjectFields(p,hiddenFields);
-    batch.set(doc(db,'projects',String(p.id)),publicData);
-    ops++;
-    if(Object.keys(privateData).length>0){
-      batch.set(doc(db,'projects',String(p.id),'private','data'),privateData);
-    }else{
-      batch.delete(doc(db,'projects',String(p.id),'private','data'));
-    }
-    ops++;
-    if(ops>=BATCH_LIMIT){
-      await batch.commit();
-      batch=writeBatch(db);
-      ops=0;
-    }
-  }
-  if(ops>0)await batch.commit();
-}
-
-// كشف ما إذا كانت الوثائق الرئيسية تحوي حقولاً مخفية — مؤشر على حاجة ترحيل
-function _needsInitialMigration(){
-  if(!projects||!projects.length)return false;
-  if(!hiddenFields||!hiddenFields.length)return false;
-  // لو أي مشروع يحمل حقلاً مخفياً في _publicProjects (الوثيقة الرئيسية) → نحتاج ترحيل
-  const hiddenSet=new Set(hiddenFields);
-  for(const p of _publicProjects){
-    for(const k in p){
-      if(hiddenSet.has(k))return true;
-    }
-  }
-  return false;
-}
-
 // Real-time subscriptions — تُنشأ بعد تسجيل الدخول
 function _subscribeRealtime(){
   _unsubAll();
   _unsubProjects=onSnapshot(collection(db,'projects'),snap=>{
-    _publicProjects=snap.docs.map(d=>{const data=d.data();return{...data,id:Number(d.id)||d.id};});
-    _mergeProjects(); // يضم _privateMap ويحدّث projects[] + sessionStorage
+    projects=snap.docs.map(d=>{const data=d.data();return{...data,id:Number(d.id)||d.id};});
+    projects.sort((a,b)=>a.id-b.id);
+    // sessionStorage بدل localStorage: الكاش يختفي عند إغلاق التبويب لمنع تسرّب بيانات المشاريع (#20)
+    try{sessionStorage.setItem('cachedProjects',JSON.stringify(projects));}catch(e){}
     // أعد الرسم لكن لا تكسر شاشة تعديل مفتوحة
     if(!_editDirty)renderAll();
     // لو تفاصيل مشروع مفتوحة، حدّثها
@@ -802,24 +670,6 @@ function _subscribeRealtime(){
       if(panel&&panel.querySelector('.dp-prog')){/* شاشة تفاصيل — إعادة الرسم */openDetail(_currentDetailId);}
     }
   },err=>{console.error('projects snapshot',err);});
-  // اشتراك بالحقول الحساسة — للأدمن فقط (قواعد Firestore ترفض للمشاهدين)
-  if(currentUser&&currentUser.role==='admin'){
-    _unsubPrivate=onSnapshot(collectionGroup(db,'private'),snap=>{
-      _privateMap={};
-      snap.forEach(d=>{
-        const parent=d.ref.parent.parent;
-        if(!parent)return;
-        const pid=Number(parent.id)||parent.id;
-        _privateMap[pid]=d.data();
-      });
-      _mergeProjects();
-      if(!_editDirty)renderAll();
-      if(_currentDetailId!=null){
-        const panel=document.getElementById('detailPanel');
-        if(panel&&panel.querySelector('.dp-prog')){openDetail(_currentDetailId);}
-      }
-    },err=>{console.error('private snapshot',err);});
-  }
   _unsubHidden=onSnapshot(doc(db,'meta','hiddenFields'),snap=>{
     if(snap.exists())hiddenFields=snap.data().fields||[];else hiddenFields=[];
   },err=>{console.error('hiddenFields snapshot',err);});
@@ -837,27 +687,13 @@ async function saveHiddenFields(){
 function isFieldHidden(fieldKey){return hiddenFields.includes(fieldKey)&&(!currentUser||currentUser.role!=='admin');}
 
 // ─── تحميل المشاريع من Firestore ───
-// يفصل قراءة الحقول العامة (للجميع) عن الحقول الحساسة (للأدمن فقط)
 async function loadProjects(){
   try{
     const snapshot=await getDocs(collection(db,'projects'));
-    _publicProjects=snapshot.docs.map(d=>{const data=d.data();return{...data,id:Number(d.id)||d.id};});
-    _privateMap={};
-    // جلب الحقول الحساسة للأدمن فقط (المشاهدون يفشلون عليها بقواعد Firestore)
-    if(currentUser&&currentUser.role==='admin'){
-      try{
-        const privSnap=await getDocs(collectionGroup(db,'private'));
-        privSnap.forEach(d=>{
-          const parent=d.ref.parent.parent;
-          if(!parent)return;
-          const pid=Number(parent.id)||parent.id;
-          _privateMap[pid]=d.data();
-        });
-      }catch(e){console.warn('loadProjects private',e);}
-    }
-    _mergeProjects();
+    projects=snapshot.docs.map(d=>{const data=d.data();return{...data,id:Number(d.id)||d.id};});
+    projects.sort((a,b)=>a.id-b.id);
     try{const md=await getDoc(doc(db,'meta','lastUpdate'));if(md.exists()){const ts=md.data().timestamp;localStorage.setItem('lastUpdate',ts);showLastUpdate(ts);}}catch(e){}
-  }catch(e){projects=[];_publicProjects=[];_privateMap={};}
+  }catch(e){projects=[];}
 }
 
 // ─── المصادقة عبر Firebase Auth ───
@@ -891,17 +727,14 @@ function applyLogin(){
   }else{
     document.querySelectorAll('.admin-only').forEach(el=>el.style.display='none');
   }
-  // بدء مراقبة الخمول (تسجيل خروج تلقائي بعد 30 دقيقة)
-  _startIdleTracking();
 }
 
 window.doLogout=async function(){
-  _stopIdleTracking();
   _unsubAll();
   try{await signOut(auth);}catch(e){}
+  // #20: مسح الكاش الحسّاس من sessionStorage ومن localStorage (توافق مع نسخ قديمة)
   sessionStorage.removeItem('cachedUser');
   sessionStorage.removeItem('cachedProjects');
-  // مسح أي بقايا من نسخ قديمة كانت في localStorage قبل الترقية
   localStorage.removeItem('cachedUser');
   localStorage.removeItem('cachedProjects');
   currentUser=null;
@@ -925,7 +758,7 @@ onAuthStateChanged(auth,async(user)=>{
     // عرض فوري من الكاش (بالدور المخزّن) — الحماية الحقيقية من Firestore Rules
     let cachedProjectsSnap=null;
     let cachedRole=null;
-    // نقرأ من sessionStorage أولاً (الجديد)، ثم localStorage (للتوافق مع نسخ قديمة)
+    // #20: نقرأ من sessionStorage أولاً (الجديد)، ثم localStorage (للتوافق مع نسخ قديمة)
     // بعد الترقية، أي بيانات قديمة في localStorage تُنقل وتُحذف
     let cachedUser=sessionStorage.getItem('cachedUser');
     let cachedProjects=sessionStorage.getItem('cachedProjects');
@@ -969,17 +802,10 @@ onAuthStateChanged(auth,async(user)=>{
       const roleChanged=cachedRole!==newUser.role;
       currentUser=newUser;
       try{sessionStorage.setItem('cachedUser',JSON.stringify(currentUser));}catch(e){}
-      await loadHiddenFields();
       await loadProjects();
+      await loadHiddenFields();
       // اشتراك realtime بعد التحميل الأول (التحديثات المستقبلية تأتي تلقائياً)
       _subscribeRealtime();
-      // #13: ترحيل أولي — عند أول تسجيل دخول للأدمن على النسخة الجديدة قد تكون
-      // الحقول الحساسة ما زالت في الوثيقة الرئيسية (قبل التطبيق). رحّلها الآن.
-      if(currentUser&&currentUser.role==='admin'&&_needsInitialMigration()){
-        console.info('#13: ترحيل أولي — نقل الحقول المخفية إلى subcollection محمي...');
-        try{await _migrateAllProjectsSplit();console.info('#13: الترحيل الأولي اكتمل');}
-        catch(e){console.error('#13: فشل الترحيل الأولي',e);showAlert('تعذّر ترحيل البيانات الحساسة تلقائياً. راجع الاتصال.');}
-      }
       const newProjectsSnap=JSON.stringify(projects);
       try{sessionStorage.setItem('cachedProjects',newProjectsSnap);}catch(e){}
       // أعد الرسم فقط لو:
@@ -994,11 +820,10 @@ onAuthStateChanged(auth,async(user)=>{
       if(skel)skel.classList.add('hidden');
     }catch(e){console.warn('firestore refresh failed',e);if(skel)skel.classList.add('hidden');}
   }else{
-    _stopIdleTracking();
     _unsubAll();
+    // #20: مسح الكاش الحسّاس من sessionStorage ومن localStorage (توافق مع نسخ قديمة)
     sessionStorage.removeItem('cachedUser');
     sessionStorage.removeItem('cachedProjects');
-    // مسح أي بقايا من نسخ قديمة كانت في localStorage قبل الترقية
     localStorage.removeItem('cachedUser');
     localStorage.removeItem('cachedProjects');
     document.getElementById('loginScreen').classList.remove('hidden');
@@ -1489,9 +1314,7 @@ function lockBtn(label){
 
 async function quickToggleHide(field){
   if(!currentUser||currentUser.role!=='admin')return;
-  if(_busy)return; _busy=true;
   const nowHidden=!hiddenFields.includes(field);
-  const prevHidden=hiddenFields.slice();
   if(nowHidden)hiddenFields.push(field);
   else hiddenFields=hiddenFields.filter(f=>f!==field);
   // تحديث فوري للأزرار المعنية بهذا الحقل فقط (بدون إعادة بناء DOM)
@@ -1503,22 +1326,20 @@ async function quickToggleHide(field){
       btn.title=t;btn.setAttribute('aria-label',t);
     }
   });
-  // #13: الإخفاء = حماية حقيقية. نرحّل الحقل بين public/private لكل المشاريع.
-  try{
-    await setDoc(doc(db,'meta','hiddenFields'),{fields:hiddenFields});
-    await _migrateAllProjectsSplit();
-  }catch(e){console.error('quickToggleHide',e);
+  // حفظ في الخلفية
+  try{await setDoc(doc(db,'meta','hiddenFields'),{fields:hiddenFields});}
+  catch(e){console.error('quickToggleHide save',e);
     // تراجع في حال الفشل
-    hiddenFields=prevHidden;
-    try{await setDoc(doc(db,'meta','hiddenFields'),{fields:hiddenFields});}catch(_){}
+    if(nowHidden)hiddenFields=hiddenFields.filter(f=>f!==field);
+    else hiddenFields.push(field);
     document.querySelectorAll('.field-lock').forEach(btn=>{
       if(btn.getAttribute('data-pf-lock')===field){
         btn.classList.toggle('locked',!nowHidden);
         btn.innerHTML=!nowHidden?LOCK_SVG_CLOSED:LOCK_SVG_OPEN;
       }
     });
-    showAlert('تعذّر حفظ الإعداد أو ترحيل البيانات. تحقق من الاتصال.');
-  }finally{_busy=false;}
+    showAlert('تعذّر حفظ الإعداد. تحقق من الاتصال.');
+  }
 }
 window.quickToggleHide=quickToggleHide;
 
@@ -2294,7 +2115,7 @@ function _saveDraft(id){
   try{
     const data=_collectEditValues();
     if(!Object.keys(data).length)return;
-    // sessionStorage: المسودات تحوي بيانات حساسة قيد التعديل، تختفي عند إغلاق التبويب
+    // #20: sessionStorage بدل localStorage — المسودات تحوي بيانات حساسة قيد التعديل
     sessionStorage.setItem(_DRAFT_PREFIX+id,JSON.stringify({savedAt:new Date().toISOString(),data}));
     _showDraftStatus('محفوظ تلقائياً');
   }catch(e){console.warn('saveDraft',e);}
@@ -2314,7 +2135,7 @@ function _showDraftStatus(text){
 }
 function _clearDraft(id){try{sessionStorage.removeItem(_DRAFT_PREFIX+id);localStorage.removeItem(_DRAFT_PREFIX+id);}catch(e){}}
 async function _tryRestoreDraft(id){
-  // sessionStorage أولاً (الجديد)، ثم localStorage (توافق مع نسخ قديمة)
+  // #20: sessionStorage أولاً (الجديد)، ثم localStorage (توافق مع نسخ قديمة — تُنقل وتُحذف)
   let raw;
   try{
     raw=sessionStorage.getItem(_DRAFT_PREFIX+id);
@@ -2484,8 +2305,7 @@ async function saveProject(id){
   p.contractor_rank=v('contractor_rank');
   p.letters=v('letters');
   p.notes=v('notes');
-  // #13: تقسيم الحقول (الحساسة → subcollection محمي) وكتابة batch ذرّية
-  try{await _saveProjectSplit(p);}catch(e){console.error('saveProject',e);showAlert('تعذّر حفظ المشروع. تحقق من الاتصال والصلاحيات.');_restore();return;}
+  try{await setDoc(doc(db,'projects',String(p.id)),{...p});}catch(e){console.error('saveProject',e);showAlert('تعذّر حفظ المشروع. تحقق من الاتصال والصلاحيات.');_restore();return;}
   _editDirty=false;
   _clearDraft(id);_clearDraftTimer();
   updateLastModified();
@@ -2500,8 +2320,7 @@ async function addNewProject(){
   // المستخدم سيستبدله مباشرة في شاشة التعديل
   const np={id:newId,name:'مشروع جديد',status:'pending',status_raw:'قيد الترسية',phase:'',progress:0,value:'0',value_num:0,contractor:'',supervisor:'',consultant:'',consultant_phone:'',pm:'',pm_email:'',pm_phone:'',category:'',budget_door:'',contract_no:'',project_no:'',duration_days:0,duration_after_ext:0,ext1:'',ext2:'',ext3:'',stops:0,date_sign:'',date_site:'',date_end:'',date_end_adj:'',date_receive_primary:'',date_receive_primary_adj:'',date_receive_final:'',date_updated:new Date().toISOString().slice(0,10),last_action:'',notes:'',letters:'',vision_linked:'',initiative:'',tax_pct:0,increase_pct:0,contractor_engineer:'',contractor_email:'',contractor_phone:'',contractor_rank:'',scope:'',description:'',sector:'',municipality:'',status_mashroat:'',is_bidding:'',elapsed_pct:0,elapsed_ext_pct:0,delay_pct:0,correction_days:0,is_stopped:'',is_received_primary:''};
   projects.push(np);
-  // #13: يفصل الحقول الحساسة للـ subcollection
-  try{await _saveProjectSplit(np);}
+  try{await setDoc(doc(db,'projects',String(newId)),{...np});}
   catch(e){console.error('addNewProject',e);showAlert('تعذّر إنشاء المشروع. تحقق من الاتصال والصلاحيات.');projects.pop();return;}
   const overlay=document.getElementById('detailOverlay');
   overlay.classList.add('open');
@@ -2515,8 +2334,7 @@ async function deleteProject(id){
   const p=projects.find(x=>x.id===id);
   if(!p)return;
   if(!await showConfirm('هل أنت متأكد من حذف المشروع:\n'+p.name+'؟',{title:'تأكيد الحذف',okLabel:'حذف',danger:true}))return;
-  // #13: حذف الوثيقة الرئيسية + الحقول الحساسة معاً
-  try{await _deleteProjectSplit(id);}catch(e){console.error('deleteProject',e);showAlert('تعذّر حذف المشروع. تحقق من الاتصال والصلاحيات.');return;}
+  try{await deleteDoc(doc(db,'projects',String(id)));}catch(e){console.error('deleteProject',e);showAlert('تعذّر حذف المشروع. تحقق من الاتصال والصلاحيات.');return;}
   projects=projects.filter(x=>x.id!==id);
   updateLastModified();
   closeDetail();
@@ -2701,23 +2519,12 @@ function importExcel(input){
       while(allKeys.length>5){const oldest=allKeys.shift();localStorage.removeItem(oldest);}
     }catch(e){console.warn('local backup failed',e);}
     try{
-      // #13: حذف الوثائق الرئيسية + الحقول الحساسة (subcollection) لكل مشروع قديم
       const oldSnap=await getDocs(collection(db,'projects'));
       const delBatch=writeBatch(db);
-      oldSnap.forEach(d=>{
-        delBatch.delete(d.ref);
-        delBatch.delete(doc(db,'projects',d.id,'private','data'));
-      });
+      oldSnap.forEach(d=>delBatch.delete(d.ref));
       await delBatch.commit();
-      // كتابة المشاريع المستوردة مع تقسيم الحساس/العام
       const batch=writeBatch(db);
-      parsed.forEach(p=>{
-        const {publicData,privateData}=_splitProjectFields(p,hiddenFields);
-        batch.set(doc(db,'projects',String(p.id)),publicData);
-        if(Object.keys(privateData).length>0){
-          batch.set(doc(db,'projects',String(p.id),'private','data'),privateData);
-        }
-      });
+      parsed.forEach(p=>batch.set(doc(db,'projects',String(p.id)),{...p}));
       await batch.commit();
     }catch(e){console.error('importExcel-write',e);showAlert('تعذّر حفظ البيانات المستوردة. لم يتم تطبيق أي تغيير. تحقق من الاتصال والصلاحيات.');_busy=false;return;}
     projects=parsed;
@@ -2899,20 +2706,9 @@ function openFieldsManager(){
 window.openFieldsManager=openFieldsManager;
 
 async function toggleFieldVisibility(field,hide){
-  if(!currentUser||currentUser.role!=='admin')return;
-  if(_busy)return; _busy=true;
-  const prevHidden=hiddenFields.slice();
   if(hide&&!hiddenFields.includes(field))hiddenFields.push(field);
   if(!hide)hiddenFields=hiddenFields.filter(f=>f!==field);
-  try{
-    await saveHiddenFields();
-    // #13: ترحيل الحقل بين public/private لكل المشاريع
-    await _migrateAllProjectsSplit();
-  }catch(e){console.error('toggleFieldVisibility',e);
-    hiddenFields=prevHidden;
-    try{await saveHiddenFields();}catch(_){}
-    showAlert('تعذّر حفظ الإعداد أو ترحيل البيانات. تحقق من الاتصال.');
-  }finally{_busy=false;}
+  await saveHiddenFields();
   const panel=document.getElementById('detailPanel');
   const scrollPos=panel.scrollTop;
   openFieldsManager();
@@ -2986,22 +2782,12 @@ async function restoreBackup(key){
     while(allKeys.length>5){const oldest=allKeys.shift();localStorage.removeItem(oldest);}
   }catch(e){console.warn('pre-restore backup failed',e);}
   try{
-    // #13: حذف القديم + الحساس، ثم كتابة الجديد مع التقسيم
     const oldSnap=await getDocs(collection(db,'projects'));
     const delBatch=writeBatch(db);
-    oldSnap.forEach(d=>{
-      delBatch.delete(d.ref);
-      delBatch.delete(doc(db,'projects',d.id,'private','data'));
-    });
+    oldSnap.forEach(d=>delBatch.delete(d.ref));
     await delBatch.commit();
     const batch=writeBatch(db);
-    data.projects.forEach(p=>{
-      const {publicData,privateData}=_splitProjectFields(p,hiddenFields);
-      batch.set(doc(db,'projects',String(p.id)),publicData);
-      if(Object.keys(privateData).length>0){
-        batch.set(doc(db,'projects',String(p.id),'private','data'),privateData);
-      }
-    });
+    data.projects.forEach(p=>batch.set(doc(db,'projects',String(p.id)),{...p}));
     await batch.commit();
   }catch(e){console.error('restoreBackup',e);showAlert('تعذّر استرجاع النسخة. تحقق من الاتصال والصلاحيات.');_busy=false;return;}
   projects=data.projects.slice();
