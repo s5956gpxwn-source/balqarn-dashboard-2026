@@ -265,6 +265,9 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 .mx-btn.danger:hover{opacity:.9;}
 .mx-input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--gborder2);background:var(--glass);color:var(--text);font-family:inherit;font-size:13px;font-weight:600;margin-top:8px;outline:none;}
 .mx-input:focus{border-color:var(--advanced);}
+.offline-bar{position:fixed;top:0;left:0;right:0;background:var(--stalled);color:#fff;padding:8px 16px;font-size:12px;font-weight:800;text-align:center;z-index:10001;transform:translateY(-100%);transition:transform .25s;box-shadow:0 4px 12px rgba(0,0,0,.15);}
+.offline-bar.show{transform:translateY(0);}
+body.has-offline-bar header{top:32px;}
 .copy-toast.show{opacity:1;transform:translateY(0);}
 @media print{.copy-btn,.copy-toast{display:none!important;}}
 .fbtn .f-count{display:inline-block;margin-right:4px;padding:1px 6px;border-radius:8px;background:var(--gborder);color:var(--text3);font-size:9px;font-weight:800;min-width:16px;}
@@ -278,6 +281,7 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 </style>
 </head>
 <body class="light locked">
+<div class="offline-bar" id="offlineBar" role="status" aria-live="polite">&#9888; لا يوجد اتصال بالإنترنت — التعديلات والحفظ متوقفة حتى يعود الاتصال</div>
 <div class="auth-loading" id="authLoading"><div class="auth-loading-spinner"></div></div>
 <div class="login-screen hidden" id="loginScreen">
   <img class="login-orn login-orn-1" id="lOrn1" alt="">
@@ -405,7 +409,7 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import{getFirestore,collection,getDocs,doc,getDoc,setDoc,deleteDoc,writeBatch}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+import{getFirestore,collection,getDocs,doc,getDoc,setDoc,deleteDoc,writeBatch,onSnapshot}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
 // ⚠️ ضع إعدادات Firebase الخاصة بمشروعك هنا
 const firebaseConfig={
@@ -520,9 +524,40 @@ window.showConfirm=showConfirm;
 let currentUser=null;
 let hiddenFields=[];
 let _busy=false;
+// دوال إلغاء الاشتراك من listeners الـ realtime
+let _unsubProjects=null;
+let _unsubHidden=null;
+let _unsubLastUpdate=null;
+function _unsubAll(){
+  [_unsubProjects,_unsubHidden,_unsubLastUpdate].forEach(fn=>{try{if(fn)fn();}catch(e){}});
+  _unsubProjects=_unsubHidden=_unsubLastUpdate=null;
+}
 
 async function loadHiddenFields(){
   try{const d=await getDoc(doc(db,'meta','hiddenFields'));if(d.exists())hiddenFields=d.data().fields||[];}catch(e){hiddenFields=[];}
+}
+
+// Real-time subscriptions — تُنشأ بعد تسجيل الدخول
+function _subscribeRealtime(){
+  _unsubAll();
+  _unsubProjects=onSnapshot(collection(db,'projects'),snap=>{
+    projects=snap.docs.map(d=>{const data=d.data();return{...data,id:Number(d.id)||d.id};});
+    projects.sort((a,b)=>a.id-b.id);
+    try{localStorage.setItem('cachedProjects',JSON.stringify(projects));}catch(e){}
+    // أعد الرسم لكن لا تكسر شاشة تعديل مفتوحة
+    if(!_editDirty)renderAll();
+    // لو تفاصيل مشروع مفتوحة، حدّثها
+    if(_currentDetailId!=null){
+      const panel=document.getElementById('detailPanel');
+      if(panel&&panel.querySelector('.dp-prog')){/* شاشة تفاصيل — إعادة الرسم */openDetail(_currentDetailId);}
+    }
+  },err=>{console.error('projects snapshot',err);});
+  _unsubHidden=onSnapshot(doc(db,'meta','hiddenFields'),snap=>{
+    if(snap.exists())hiddenFields=snap.data().fields||[];else hiddenFields=[];
+  },err=>{console.error('hiddenFields snapshot',err);});
+  _unsubLastUpdate=onSnapshot(doc(db,'meta','lastUpdate'),snap=>{
+    if(snap.exists()){const ts=snap.data().timestamp;localStorage.setItem('lastUpdate',ts);showLastUpdate(ts);}
+  },err=>{console.error('lastUpdate snapshot',err);});
 }
 async function saveHiddenFields(){
   try{await setDoc(doc(db,'meta','hiddenFields'),{fields:hiddenFields});}catch(e){console.error('saveHiddenFields',e);showAlert('تعذّر حفظ الإعدادات. تأكد من الاتصال والصلاحيات.');}
@@ -577,6 +612,7 @@ function applyLogin(){
 }
 
 window.doLogout=async function(){
+  _unsubAll();
   try{await signOut(auth);}catch(e){}
   localStorage.removeItem('cachedUser');
   localStorage.removeItem('cachedProjects');
@@ -632,6 +668,8 @@ onAuthStateChanged(auth,async(user)=>{
       try{localStorage.setItem('cachedUser',JSON.stringify(currentUser));}catch(e){}
       await loadProjects();
       await loadHiddenFields();
+      // اشتراك realtime بعد التحميل الأول (التحديثات المستقبلية تأتي تلقائياً)
+      _subscribeRealtime();
       const newProjectsSnap=JSON.stringify(projects);
       try{localStorage.setItem('cachedProjects',newProjectsSnap);}catch(e){}
       // أعد الرسم فقط لو:
@@ -644,6 +682,7 @@ onAuthStateChanged(auth,async(user)=>{
       }
     }catch(e){console.warn('firestore refresh failed',e);}
   }else{
+    _unsubAll();
     localStorage.removeItem('cachedUser');
     localStorage.removeItem('cachedProjects');
     document.getElementById('loginScreen').classList.remove('hidden');
@@ -2318,6 +2357,17 @@ function applyThemeAssets(){
 // الافتراضي دائماً فاتح - الثيم يتغير فقط بعد تسجيل الدخول حسب تفضيل المستخدم
 applyThemeAssets();
 window.toggleTheme=toggleTheme;
+
+// ─── رصد حالة الاتصال بالإنترنت ───
+function _updateOnlineStatus(){
+  const bar=document.getElementById('offlineBar');
+  if(!bar)return;
+  if(navigator.onLine){bar.classList.remove('show');document.body.classList.remove('has-offline-bar');}
+  else{bar.classList.add('show');document.body.classList.add('has-offline-bar');}
+}
+window.addEventListener('online',_updateOnlineStatus);
+window.addEventListener('offline',_updateOnlineStatus);
+_updateOnlineStatus();
 
 // ─── اختصارات الكيبورد ───
 // Escape: إغلاق المودال، أو مسح البحث لو كان الحقل مركّزاً
