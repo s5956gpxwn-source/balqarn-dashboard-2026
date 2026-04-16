@@ -291,7 +291,7 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 .tl-empty{text-align:center;color:var(--text4);padding:40px;font-size:13px;}
 .tl-wrap{min-width:800px;}
 .tr-card{background:var(--glass2);border:1px solid var(--gborder);border-radius:12px;padding:16px;margin-bottom:14px;}
-.tr-title{font-size:13px;font-weight:900;color:var(--text);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.tr-title{font-size:13px;font-weight:900;color:var(--text);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
 .tr-chart{position:relative;height:200px;margin-top:8px;}
 .tr-chart svg{width:100%;height:100%;overflow:visible;}
 .tr-grid-row{font-size:9px;fill:var(--text4);}
@@ -309,6 +309,10 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 .ins-item{font-size:11px;color:var(--text);line-height:1.6;cursor:pointer;padding:3px 6px;border-radius:5px;transition:background .15s;display:flex;align-items:center;gap:6px;}
 .ins-item:hover{background:var(--glass2);color:var(--advanced);}
 .ins-item::before{content:"•";color:var(--pending);font-weight:900;}
+.chart-dl-btn{background:transparent;border:1px solid var(--gborder);color:var(--text3);padding:2px 7px;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;font-weight:700;transition:all .15s;vertical-align:middle;margin-right:6px;}
+.chart-dl-btn:hover{background:var(--advanced);color:#fff;border-color:var(--advanced);}
+.tr-export-btn{position:absolute;top:14px;left:14px;}
+@media print{.chart-dl-btn,.tr-export-btn{display:none!important;}}
 .skel{background:linear-gradient(90deg,var(--gborder) 0%,var(--glass2) 50%,var(--gborder) 100%);background-size:200% 100%;animation:skel-shimmer 1.4s linear infinite;border-radius:8px;}
 @keyframes skel-shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
 .skel-wrap{padding:20px 28px 0;max-width:1440px;margin:0 auto;}
@@ -407,9 +411,9 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
   </div>
   <div class="insights-banner" id="insightsBanner" style="display:none"></div>
   <div class="charts-row">
-    <div class="chart-card">
+    <div class="chart-card" style="position:relative">
       <img class="chart-orn" id="chartOrn1" alt="">
-      <div class="chart-title">حالة المشاريع</div>
+      <div class="chart-title">حالة المشاريع <button type="button" class="chart-dl-btn" onclick="exportChart('donut','حالة_المشاريع')" title="تصدير كصورة PNG">&#11123;</button></div>
       <div class="donut-wrap">
         <div class="donut-container" id="donutContainer" style="position:relative;width:130px;height:130px;flex-shrink:0;overflow:visible;">
           <svg class="donut" width="130" height="130" viewBox="0 0 180 180" id="donutSvg"></svg>
@@ -867,6 +871,58 @@ function renderInsights(){
 }
 window.renderInsights=renderInsights;
 
+// ─── تصدير الرسوم البيانية كصور PNG ───
+function exportChart(kind,fileBase){
+  try{
+    let svgEl;
+    if(kind==='donut')svgEl=document.getElementById('donutSvg');
+    else svgEl=typeof kind==='string'?document.querySelector(kind):kind;
+    if(!svgEl){showAlert('الرسم غير متاح');return;}
+    // استنساخ SVG وتضمين الأبعاد الفعلية
+    const rect=svgEl.getBoundingClientRect();
+    const clone=svgEl.cloneNode(true);
+    const vb=clone.getAttribute('viewBox');
+    const vbParts=vb?vb.split(/\s+/).map(Number):null;
+    const w=vbParts?vbParts[2]:rect.width;
+    const h=vbParts?vbParts[3]:rect.height;
+    clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+    clone.setAttribute('width',w);
+    clone.setAttribute('height',h);
+    // حلّ alt ألوان CSS: استبدل currentColor بلون نص فعلي
+    const isDark=document.body.classList.contains('dark');
+    const textColor=isDark?'#F2E7DE':'#392015';
+    clone.querySelectorAll('*').forEach(el=>{
+      const s=window.getComputedStyle(svgEl);
+      el.style.color=textColor;
+    });
+    const svgStr=new XMLSerializer().serializeToString(clone);
+    // رسم على canvas بدقة 2x
+    const scale=2;
+    const canvas=document.createElement('canvas');
+    canvas.width=w*scale;canvas.height=h*scale;
+    const ctx=canvas.getContext('2d');
+    // خلفية بلون الموقع
+    ctx.fillStyle=isDark?'#1A120E':'#FDFAF7';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    const img=new Image();
+    img.onload=()=>{
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      canvas.toBlob(blob=>{
+        if(!blob){showAlert('تعذّر إنشاء الصورة');return;}
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        const d=new Date();const pad=n=>String(n).padStart(2,'0');
+        a.download=(fileBase||'chart')+'_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'.png';
+        a.href=url;a.click();
+        setTimeout(()=>URL.revokeObjectURL(url),1000);
+      },'image/png');
+    };
+    img.onerror=()=>showAlert('تعذّر تحويل الرسم إلى صورة');
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgStr);
+  }catch(e){console.error('exportChart',e);showAlert('تعذّر تصدير الرسم');}
+}
+window.exportChart=exportChart;
+
 function renderKPI(){
   const total=projects.length;
   const cnt={advanced:0,regular:0,pending:0,stopped:0,late:0,stalled:0,preceipt:0};
@@ -1163,16 +1219,16 @@ function renderTrends(){
   const endingCount=toSeries(ending,false);
   const signedValue=toSeries(signed,true);
   container.innerHTML=`
-    <div class="tr-card">
-      <div class="tr-title">عدد المشاريع المُوقّعة شهرياً <span style="font-size:10px;color:var(--text3);font-weight:700">حسب تاريخ التوقيع</span></div>
+    <div class="tr-card" data-trchart="signed-count">
+      <div class="tr-title"><span>عدد المشاريع المُوقّعة شهرياً <span style="font-size:10px;color:var(--text3);font-weight:700">حسب تاريخ التوقيع</span></span><button type="button" class="chart-dl-btn" onclick="exportChart(document.querySelector('[data-trchart=signed-count] svg'),'مشاريع_موقعة_شهرياً')">&#11123; تصدير</button></div>
       ${_barChartSvg(signedCount,COLORS.advanced,fmtCount)}
     </div>
-    <div class="tr-card">
-      <div class="tr-title">عدد المشاريع المنتهية شهرياً <span style="font-size:10px;color:var(--text3);font-weight:700">حسب تاريخ انتهاء العقد</span></div>
+    <div class="tr-card" data-trchart="ending-count">
+      <div class="tr-title"><span>عدد المشاريع المنتهية شهرياً <span style="font-size:10px;color:var(--text3);font-weight:700">حسب تاريخ انتهاء العقد</span></span><button type="button" class="chart-dl-btn" onclick="exportChart(document.querySelector('[data-trchart=ending-count] svg'),'مشاريع_منتهية_شهرياً')">&#11123; تصدير</button></div>
       ${_barChartSvg(endingCount,COLORS.pending,fmtCount)}
     </div>
-    <div class="tr-card">
-      <div class="tr-title">قيمة العقود المُوقّعة شهرياً <span style="font-size:10px;color:var(--text3);font-weight:700">مجموع القيم التعاقدية</span></div>
+    <div class="tr-card" data-trchart="signed-value">
+      <div class="tr-title"><span>قيمة العقود المُوقّعة شهرياً <span style="font-size:10px;color:var(--text3);font-weight:700">مجموع القيم التعاقدية</span></span><button type="button" class="chart-dl-btn" onclick="exportChart(document.querySelector('[data-trchart=signed-value] svg'),'قيم_العقود_شهرياً')">&#11123; تصدير</button></div>
       ${_barChartSvg(signedValue,COLORS.regular,fmtValue)}
     </div>`;
 }
