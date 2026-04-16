@@ -12,3 +12,9 @@ firebase-debug.log
 setup-firebase.js
 upload-projects-console.js
 setup-data.html
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
