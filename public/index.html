@@ -272,6 +272,33 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 .sw-update-bar{position:fixed;bottom:20px;left:20px;background:var(--advanced);color:#fff;padding:10px 16px;border-radius:12px;font-size:12px;font-weight:800;z-index:10000;display:flex;align-items:center;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,.2);opacity:0;transform:translateY(20px);transition:all .25s;pointer-events:none;}
 .sw-update-bar.show{opacity:1;transform:translateY(0);pointer-events:all;}
 .sw-update-bar button{background:#fff;color:var(--advanced);border:none;padding:6px 14px;border-radius:8px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;}
+.timeline-view,.trends-view{background:var(--glass);border:1px solid var(--gborder);border-radius:16px;padding:16px;overflow-x:auto;}
+.tl-head{display:flex;gap:0;border-bottom:2px solid var(--gborder);padding-bottom:6px;margin-bottom:8px;position:sticky;top:0;background:var(--glass);z-index:2;}
+.tl-head-row{display:flex;gap:0;flex:1;}
+.tl-month{flex:1;min-width:60px;text-align:center;font-size:9px;font-weight:800;color:var(--text3);border-right:1px dashed var(--gborder);padding:4px 2px;}
+.tl-year{flex:1;text-align:center;font-size:11px;font-weight:900;color:var(--text2);padding:4px 2px;border-right:1px solid var(--gborder);}
+.tl-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gborder);transition:background .15s;}
+.tl-row:hover{background:var(--glass2);}
+.tl-row:last-child{border-bottom:none;}
+.tl-name{width:180px;flex-shrink:0;font-size:11px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
+.tl-name:hover{color:var(--advanced);}
+.tl-track{flex:1;position:relative;height:20px;background:var(--gborder);border-radius:4px;overflow:visible;}
+.tl-bar{position:absolute;top:0;bottom:0;border-radius:4px;cursor:pointer;opacity:.85;transition:opacity .15s,transform .1s;display:flex;align-items:center;justify-content:center;}
+.tl-bar:hover{opacity:1;transform:scaleY(1.15);}
+.tl-bar-label{font-size:9px;color:#fff;font-weight:800;white-space:nowrap;padding:0 6px;text-shadow:0 0 2px rgba(0,0,0,.4);}
+.tl-today{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--stalled);z-index:3;}
+.tl-today::after{content:'اليوم';position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--stalled);font-weight:900;white-space:nowrap;}
+.tl-empty{text-align:center;color:var(--text4);padding:40px;font-size:13px;}
+.tl-wrap{min-width:800px;}
+.tr-card{background:var(--glass2);border:1px solid var(--gborder);border-radius:12px;padding:16px;margin-bottom:14px;}
+.tr-title{font-size:13px;font-weight:900;color:var(--text);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.tr-chart{position:relative;height:200px;margin-top:8px;}
+.tr-chart svg{width:100%;height:100%;overflow:visible;}
+.tr-grid-row{font-size:9px;fill:var(--text4);}
+.tr-bar{fill:var(--advanced);transition:opacity .15s;cursor:pointer;}
+.tr-bar:hover{opacity:.7;}
+.tr-tooltip{position:absolute;background:var(--glass2);border:1px solid var(--gborder2);border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;pointer-events:none;opacity:0;transition:opacity .15s;white-space:nowrap;z-index:5;color:var(--text);}
+.tr-tooltip.show{opacity:1;}
 .skel{background:linear-gradient(90deg,var(--gborder) 0%,var(--glass2) 50%,var(--gborder) 100%);background-size:200% 100%;animation:skel-shimmer 1.4s linear infinite;border-radius:8px;}
 @keyframes skel-shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
 .skel-wrap{padding:20px 28px 0;max-width:1440px;margin:0 auto;}
@@ -417,14 +444,21 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
       <button class="fbtn" data-filter="preceipt" onclick="setFilter('preceipt',this)">تم الاستلام ابتدائيا<span class="f-count" data-count="preceipt">0</span></button>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
     <span style="font-size:11px;font-weight:800;color:var(--text3);white-space:nowrap;">فرز حسب:</span>
     <button class="fbtn sort-btn" id="sort_id" onclick="setSort('id',this)">الافتراضي</button>
     <button class="fbtn sort-btn" onclick="setSort('value_num',this)">القيمة</button>
     <button class="fbtn sort-btn" onclick="setSort('progress',this)">الإنجاز</button>
     <button class="fbtn sort-btn" onclick="setSort('date_end',this)">التاريخ</button>
+    <div style="flex:1"></div>
+    <span style="font-size:11px;font-weight:800;color:var(--text3);white-space:nowrap;">العرض:</span>
+    <button class="fbtn view-btn active" data-view="grid" onclick="setView('grid',this)">&#9783; شبكة</button>
+    <button class="fbtn view-btn" data-view="timeline" onclick="setView('timeline',this)">&#8757; جدول زمني</button>
+    <button class="fbtn view-btn" data-view="trends" onclick="setView('trends',this)">&#128200; اتجاهات</button>
   </div>
   <div class="proj-grid" id="projGrid"></div>
+  <div class="timeline-view" id="timelineView" style="display:none"></div>
+  <div class="trends-view" id="trendsView" style="display:none"></div>
 </main>
 <footer>
   <div class="orn-bar" style="height:30px;margin-top:36px"><img src="assets/ornaments/footer_bar.png" alt=""></div>
@@ -941,6 +975,79 @@ function renderGrid(){
       }).join('')
     :`<div style="color:var(--text4);font-size:13px;padding:40px;text-align:center;grid-column:1/-1">لا توجد مشاريع ${filter!=='all'?LABELS[filter]||'':''}${filter!=='all'?' حالياً':''}</div>`;
 }
+
+// ─── التبديل بين طرق العرض (شبكة / جدول زمني / اتجاهات) ───
+let _currentView='grid';
+function setView(v,btn){
+  _currentView=v;
+  document.querySelectorAll('.view-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('data-view')===v));
+  document.getElementById('projGrid').style.display=v==='grid'?'':'none';
+  document.getElementById('timelineView').style.display=v==='timeline'?'':'none';
+  document.getElementById('trendsView').style.display=v==='trends'?'':'none';
+  if(v==='timeline')renderTimeline();
+  else if(v==='trends')renderTrends();
+}
+window.setView=setView;
+
+// ─── جدول زمني (Gantt) ───
+function _parseDate(s){
+  if(!s)return null;
+  const d=new Date(_toIsoDate(s));
+  return isNaN(d)?null:d;
+}
+function renderTimeline(){
+  const container=document.getElementById('timelineView');
+  let list=filter==='all'?[...projects]:projects.filter(p=>p.status===filter);
+  if(searchQuery){const q=searchQuery.toLowerCase();list=list.filter(p=>(p.name||'').toLowerCase().includes(q)||(p.contractor||'').toLowerCase().includes(q)||(p.category||'').toLowerCase().includes(q)||(p.pm||'').toLowerCase().includes(q)||(p.contract_no||'').toLowerCase().includes(q));}
+  // المشاريع التي لها تاريخ بداية ونهاية فقط
+  const rows=list.map(p=>{
+    const start=_parseDate(p.date_sign)||_parseDate(p.date_site);
+    const end=_parseDate(p.date_end_adj)||_parseDate(p.date_end);
+    return start&&end&&end>=start?{p,start,end}:null;
+  }).filter(Boolean);
+  if(!rows.length){container.innerHTML='<div class="tl-empty">لا توجد مشاريع بتواريخ توقيع وانتهاء ضمن الفلتر الحالي</div>';return;}
+  // المدى الزمني
+  let minD=rows[0].start,maxD=rows[0].end;
+  rows.forEach(r=>{if(r.start<minD)minD=r.start;if(r.end>maxD)maxD=r.end;});
+  // قرّب لبداية الشهر
+  minD=new Date(minD.getFullYear(),minD.getMonth(),1);
+  maxD=new Date(maxD.getFullYear(),maxD.getMonth()+1,0);
+  const totalDays=Math.max(1,(maxD-minD)/(86400000));
+  // أنشئ قائمة الأشهر
+  const months=[];let cur=new Date(minD);
+  while(cur<=maxD){months.push(new Date(cur));cur.setMonth(cur.getMonth()+1);}
+  const monthNames=['ينا','فبر','مار','أبر','ماي','يون','يول','أغس','سبت','أكت','نوف','ديس'];
+  // موضع اليوم
+  const today=new Date();
+  const todayPct=(today>=minD&&today<=maxD)?((today-minD)/(86400000)/totalDays)*100:-1;
+  // ترتيب حسب تاريخ البداية
+  rows.sort((a,b)=>a.start-b.start);
+  // بناء HTML
+  let html='<div class="tl-wrap"><div class="tl-head"><div style="width:180px;flex-shrink:0;font-size:11px;font-weight:900;color:var(--text3);padding:4px 8px;">المشروع</div><div class="tl-head-row">';
+  months.forEach((m,i)=>{
+    const isYearStart=i===0||m.getMonth()===0;
+    html+=`<div class="tl-month"${isYearStart?' style="border-right-color:var(--text3);border-right-style:solid"':''}>${isYearStart?'<div style="font-weight:900;color:var(--text)">'+m.getFullYear()+'</div>':''}${monthNames[m.getMonth()]}</div>`;
+  });
+  html+='</div></div>';
+  rows.forEach(({p,start,end})=>{
+    const leftPct=((start-minD)/(86400000)/totalDays)*100;
+    const widthPct=((end-start)/(86400000)/totalDays)*100;
+    const color=COLORS[p.status]||'#888';
+    const progInBar=Math.max(0,Math.min(100,p.progress||0));
+    html+=`<div class="tl-row">
+      <div class="tl-name" title="${escapeHtml(p.name)}" onclick="openDetail(${p.id})">${escapeHtml(p.name)}</div>
+      <div class="tl-track">
+        ${todayPct>=0?'<div class="tl-today" style="right:'+(100-todayPct)+'%"></div>':''}
+        <div class="tl-bar" style="right:${leftPct}%;width:${Math.max(widthPct,1)}%;background:${color};" onclick="openDetail(${p.id})" title="${escapeHtml(p.name)} — ${escapeHtml(LABELS[p.status]||'')} — ${Math.round(progInBar)}%">
+          <div class="tl-bar-label">${escapeHtml(LABELS[p.status]||'')} · ${Math.round(progInBar)}%</div>
+        </div>
+      </div>
+    </div>`;
+  });
+  html+='</div>';
+  container.innerHTML=html;
+}
+window.renderTimeline=renderTimeline;
 
 function setFilter(f,btn){
   filter=f;
