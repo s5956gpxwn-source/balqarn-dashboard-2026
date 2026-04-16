@@ -984,46 +984,59 @@ setTimeout(()=>{try{w.print();}catch(e){}setTimeout(()=>{try{w.close();}catch(e)
 window.printDetail=printDetail;
 
 // ─── إعدادات طباعة مشروع واحد ───
-// مجموعة الحقول المستثناة من الطباعة. تُحفظ خلال الجلسة فقط.
+// مجموعة الحقول المستثناة من الطباعة. تُحفظ خلال جلسة الإعدادات فقط.
 const _printDetailExcluded=new Set();
+let _printDetailInitialized=false;
+
+// يقرأ قائمة حقول المشروع من لوحة التفاصيل (بعد إعادة رسمها)
+function _getProjectFields(id){
+  openDetail(id);
+  const panel=document.getElementById('detailPanel');
+  const all=Array.from(panel.querySelectorAll('[data-pf]')).map(el=>el.getAttribute('data-pf'));
+  const seen=new Set();const fields=[];
+  all.forEach(f=>{if(!seen.has(f)){seen.add(f);fields.push(f);}});
+  return fields;
+}
 
 function openProjectPrintSettings(id){
   if(!currentUser||currentUser.role!=='admin')return;
   const p=projects.find(x=>x.id===id);if(!p)return;
-  // أعد رسم تفاصيل المشروع أولاً لضمان التقاط جميع الحقول الحالية
-  openDetail(id);
-  // اقرأ كل الحقول من اللوحة الحالية
-  const panel=document.getElementById('detailPanel');
-  const all=Array.from(panel.querySelectorAll('[data-pf]')).map(el=>el.getAttribute('data-pf'));
-  // إزالة التكرار مع الحفاظ على الترتيب
-  const seen=new Set();const fields=[];
-  all.forEach(f=>{if(!seen.has(f)){seen.add(f);fields.push(f);}});
+  const fields=_getProjectFields(id);
   if(!fields.length){alert('لا توجد بيانات قابلة للطباعة في هذا المشروع');return;}
-  const allSelected=fields.every(f=>!_printDetailExcluded.has(f));
+  // تهيئة الافتراضي: عند أول فتح، المخفي غير محدد (أي في الاستثناءات)
+  if(!_printDetailInitialized){
+    _printDetailExcluded.clear();
+    fields.forEach(f=>{if(hiddenFields.includes(f))_printDetailExcluded.add(f);});
+    _printDetailInitialized=true;
+  }
+  const selectedCount=fields.filter(f=>!_printDetailExcluded.has(f)).length;
+  const panel=document.getElementById('detailPanel');
+  const actionBtn=(txt,fn,primary)=>`<button onclick="${fn}" style="padding:6px 12px;border-radius:8px;border:1px solid ${primary?'var(--advanced)':'var(--gborder2)'};background:${primary?'var(--advancedt)':'var(--glass)'};color:${primary?'var(--advanced)':'var(--text2)'};font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;flex:1;min-width:120px;">${txt}</button>`;
   panel.innerHTML=`
     <div class="dp-head">
       <div>
         <div class="dp-name">إعدادات طباعة المشروع</div>
         <div style="margin-top:4px;font-size:11px;color:var(--text3)">${escapeHtml(p.name)}</div>
-        <div style="margin-top:4px;font-size:10px;color:var(--text3)">اختر الحقول التي تريد إدراجها في الطباعة</div>
+        <div style="margin-top:4px;font-size:10px;color:var(--text3)">افتراضياً: المخفية مستثناة. خصّص الاختيار كما تريد.</div>
       </div>
       <div class="dp-head-actions">
         <button class="btn-close" onclick="cancelProjectPrintSettings(${p.id})">&#x2715;</button>
       </div>
     </div>
     <div class="dp-body">
-      <div style="margin-bottom:6px;">
-        <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--advancedt);border:1px solid var(--advanced);border-radius:8px;font-size:12px;font-weight:700;color:var(--advanced);cursor:pointer;">
-          <input type="checkbox" ${allSelected?'checked':''} onchange="toggleAllProjectPrintFields(${p.id},this.checked)" style="width:16px;height:16px;accent-color:var(--advanced);cursor:pointer;">
-          <span>تحديد / إلغاء الكل (${fields.length} حقل)</span>
-        </label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+        ${actionBtn('&#9745; تحديد الكل','selectAllProjectPrintFields('+p.id+')',false)}
+        ${actionBtn('&#9744; إلغاء الكل','clearAllProjectPrintFields('+p.id+')',false)}
+        ${actionBtn('&#128274; المخفي فقط','selectOnlyHiddenProjectPrintFields('+p.id+')',false)}
+        ${actionBtn('&#128275; غير المخفي فقط','selectOnlyVisibleProjectPrintFields('+p.id+')',true)}
       </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:700;">محدّد: ${selectedCount} من ${fields.length}</div>
       <div style="display:flex;flex-direction:column;gap:5px;">
         ${fields.map(f=>{const checked=!_printDetailExcluded.has(f);const isHidden=hiddenFields.includes(f);return `
-          <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--glass);border:1px solid var(--gborder);border-radius:8px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">
+          <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:${isHidden?'var(--stalledt)':'var(--glass)'};border:1px solid ${isHidden?'rgba(151,61,75,.3)':'var(--gborder)'};border-radius:8px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">
             <input type="checkbox" ${checked?'checked':''} onchange="toggleProjectPrintField('${f.replace(/'/g,"\\'")}',this.checked,${p.id})" style="width:15px;height:15px;accent-color:var(--advanced);cursor:pointer;">
             <span style="flex:1">${escapeHtml(f)}</span>
-            ${isHidden?'<span style="font-size:9px;color:var(--stalled);font-weight:700">🔒 مخفي عن المستخدمين</span>':''}
+            ${isHidden?'<span style="font-size:9px;color:var(--stalled);font-weight:700">&#128274; مخفي</span>':''}
           </label>`;}).join('')}
       </div>
       <div class="dp-form-actions">
@@ -1041,33 +1054,49 @@ function toggleProjectPrintField(field,on,id){
   openProjectPrintSettings(id);panel.scrollTop=sp;
 }
 
-function toggleAllProjectPrintFields(id,on){
-  const p=projects.find(x=>x.id===id);if(!p)return;
-  // أعد رسم التفاصيل لأخذ قائمة الحقول
-  const tmpPanel=document.createElement('div');
-  // طريقة مباشرة: استخدم الحقول الحالية المعروضة قبل الإغلاق
-  // لكن الـ panel الآن يعرض الإعدادات؛ لذا نعتمد على فتح openDetail ثم القراءة
-  openDetail(id);
-  const panel=document.getElementById('detailPanel');
-  const fields=Array.from(panel.querySelectorAll('[data-pf]')).map(el=>el.getAttribute('data-pf'));
-  if(on){fields.forEach(f=>_printDetailExcluded.delete(f));}
-  else{fields.forEach(f=>_printDetailExcluded.add(f));}
+function selectAllProjectPrintFields(id){
+  _printDetailExcluded.clear();
+  openProjectPrintSettings(id);
+}
+
+function clearAllProjectPrintFields(id){
+  const fields=_getProjectFields(id);
+  _printDetailExcluded.clear();
+  fields.forEach(f=>_printDetailExcluded.add(f));
+  openProjectPrintSettings(id);
+}
+
+function selectOnlyHiddenProjectPrintFields(id){
+  const fields=_getProjectFields(id);
+  _printDetailExcluded.clear();
+  fields.forEach(f=>{if(!hiddenFields.includes(f))_printDetailExcluded.add(f);});
+  openProjectPrintSettings(id);
+}
+
+function selectOnlyVisibleProjectPrintFields(id){
+  const fields=_getProjectFields(id);
+  _printDetailExcluded.clear();
+  fields.forEach(f=>{if(hiddenFields.includes(f))_printDetailExcluded.add(f);});
   openProjectPrintSettings(id);
 }
 
 function confirmProjectPrint(id){
   // أعد رسم تفاصيل المشروع ثم اطبع (printDetail يفلتر بـ _printDetailExcluded)
   openDetail(id);
-  setTimeout(()=>{printDetail();},150);
+  setTimeout(()=>{printDetail();_printDetailInitialized=false;},150);
 }
 
 function cancelProjectPrintSettings(id){
+  _printDetailInitialized=false;
   openDetail(id);
 }
 
 window.openProjectPrintSettings=openProjectPrintSettings;
 window.toggleProjectPrintField=toggleProjectPrintField;
-window.toggleAllProjectPrintFields=toggleAllProjectPrintFields;
+window.selectAllProjectPrintFields=selectAllProjectPrintFields;
+window.clearAllProjectPrintFields=clearAllProjectPrintFields;
+window.selectOnlyHiddenProjectPrintFields=selectOnlyHiddenProjectPrintFields;
+window.selectOnlyVisibleProjectPrintFields=selectOnlyVisibleProjectPrintFields;
 window.confirmProjectPrint=confirmProjectPrint;
 window.cancelProjectPrintSettings=cancelProjectPrintSettings;
 
