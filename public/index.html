@@ -191,7 +191,10 @@ footer{margin-top:40px;}
 .dp-form-label{font-size:10px;color:var(--text3);font-weight:700;margin-bottom:4px;display:block;}
 .dp-form-group{margin-bottom:2px;}
 .dp-form-actions{display:flex;gap:10px;justify-content:center;padding:16px 0 4px;border-top:1px solid var(--gborder);}
-.dp-save-btn,.dp-cancel-btn{padding:10px 28px;border-radius:10px;border:none;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;}
+.dp-save-btn,.dp-cancel-btn{padding:10px 28px;border-radius:10px;border:none;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px;justify-content:center;}
+.dp-save-btn:disabled,.dp-cancel-btn:disabled{opacity:.7;cursor:wait;}
+.btn-spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+.dp-form-input.has-error,.dp-form-select.has-error,.dp-form-textarea.has-error{border-color:var(--stalled)!important;background:var(--stalledt)!important;}
 .dp-save-btn{background:var(--advanced);color:white;}
 .dp-save-btn:hover{opacity:.85;}
 .dp-cancel-btn{background:var(--glass);color:var(--text2);border:1px solid var(--gborder2);}
@@ -871,6 +874,7 @@ function setFilterFromKPI(f){
 
 let _rowOrnIdx=0;
 let _currentDetailId=null;
+let _editDirty=false;
 
 // زر قفل صغير بجانب كل حقل — يظهر للأدمن فقط
 // يحوّل الحقل بين مخفي/ظاهر للمستخدمين العاديين
@@ -1069,7 +1073,17 @@ function openDetail(id){
   setTimeout(()=>{const f=document.getElementById('dpFill');if(f)f.style.width=p.progress+'%';},60);
 }
 
-function closeDetail(){_currentDetailId=null;document.getElementById('detailOverlay').classList.remove('open');document.body.style.overflow='';}
+async function closeDetail(){
+  // لو شاشة التعديل مفتوحة وفيها تعديلات، اطلب تأكيد
+  if(_editDirty){
+    const ok=await showConfirm('يوجد تغييرات غير محفوظة — سيتم فقدانها.\nهل تريد المتابعة بدون حفظ؟',{title:'تغييرات غير محفوظة',okLabel:'تجاهل وأغلق',danger:true});
+    if(!ok)return;
+  }
+  _editDirty=false;
+  _currentDetailId=null;
+  document.getElementById('detailOverlay').classList.remove('open');
+  document.body.style.overflow='';
+}
 function printDetail(){
 const panel=document.getElementById('detailPanel');
 const projName=panel.querySelector('.dp-name')?.textContent||'مشروع';
@@ -1495,7 +1509,7 @@ function editProject(id){
     <div class="dp-head">
       <div><div class="dp-name">${escapeHtml(p.name)||'مشروع جديد'}</div><div style="margin-top:4px;font-size:11px;color:var(--text3)">وضع التعديل</div></div>
       <div class="dp-head-actions">
-        <button class="btn-close" onclick="openDetail(${id})">&#x2715;</button>
+        <button class="btn-close" onclick="cancelEdit(${id})">&#x2715;</button>
       </div>
     </div>
     <div class="dp-body">
@@ -1619,24 +1633,71 @@ function editProject(id){
       </div>
 
       <div class="dp-form-actions">
-        <button class="dp-save-btn" onclick="saveProject(${id})">&#10003; حفظ</button>
-        <button class="dp-cancel-btn" onclick="openDetail(${id})">إلغاء</button>
+        <button class="dp-save-btn" id="editSaveBtn" onclick="saveProject(${id})">&#10003; حفظ</button>
+        <button class="dp-cancel-btn" onclick="cancelEdit(${id})">إلغاء</button>
       </div>
+      <div id="editErrorBox" style="display:none;margin-top:8px;padding:10px 14px;background:var(--stalledt);border:1px solid var(--stalled);border-radius:8px;color:var(--stalled);font-size:12px;font-weight:700;"></div>
     </div>`;
   panel.scrollTop=0;
+  // تتبّع التغييرات غير المحفوظة
+  _editDirty=false;
+  const form=document.querySelector('.dp-body');
+  if(form){
+    form.addEventListener('input',()=>{_editDirty=true;},{once:true,capture:true});
+    form.addEventListener('change',()=>{_editDirty=true;},{once:true,capture:true});
+  }
 }
+
+// إلغاء التعديل — مع تنبيه لو هناك تغييرات
+async function cancelEdit(id){
+  if(_editDirty){
+    const ok=await showConfirm('يوجد تغييرات غير محفوظة — سيتم فقدانها.\nهل تريد المتابعة بدون حفظ؟',{title:'تغييرات غير محفوظة',okLabel:'تجاهل وأغلق',danger:true});
+    if(!ok)return;
+  }
+  _editDirty=false;
+  openDetail(id);
+}
+window.cancelEdit=cancelEdit;
+
+// عرض خطأ إدخال في أعلى الفورم
+function _showEditError(msg){
+  const box=document.getElementById('editErrorBox');
+  if(!box)return;
+  box.textContent=msg;box.style.display='block';
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function _clearEditErrors(){
+  const box=document.getElementById('editErrorBox');
+  if(box){box.textContent='';box.style.display='none';}
+  document.querySelectorAll('.dp-form-input.has-error').forEach(el=>el.classList.remove('has-error'));
+}
+
+// تحقق بسيط من صيغة البريد/الجوال
+function _isValidEmail(e){return !e||/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(e).trim());}
+function _isValidPhone(p){if(!p)return true;const s=String(p).replace(/[\s\-()]/g,'');return /^(\+?966|0)?5\d{8}$/.test(s)||/^\+?\d{7,15}$/.test(s);}
 
 async function saveProject(id){
   if(_busy)return;_busy=true;
+  const saveBtn=document.getElementById('editSaveBtn');
+  const origBtnHtml=saveBtn?saveBtn.innerHTML:'';
+  if(saveBtn){saveBtn.disabled=true;saveBtn.innerHTML='<span class="btn-spinner"></span> جاري الحفظ...';}
+  const _restore=()=>{_busy=false;if(saveBtn){saveBtn.disabled=false;saveBtn.innerHTML=origBtnHtml;}};
   try{
-  const p=projects.find(x=>x.id===id);if(!p){_busy=false;return;}
+  _clearEditErrors();
+  const p=projects.find(x=>x.id===id);if(!p){_restore();return;}
   const v=f=>{ const el=document.getElementById('edit_'+f); return el?el.value:''; };
+  const markErr=f=>{const el=document.getElementById('edit_'+f);if(el)el.classList.add('has-error');};
   const nameVal=v('name').trim();
-  if(!nameVal){await showAlert('اسم المشروع مطلوب');return;}
+  if(!nameVal){_showEditError('اسم المشروع مطلوب');markErr('name');_restore();return;}
   const progVal=parseInt(v('progress'))||0;
-  if(progVal<0||progVal>100){await showAlert('نسبة الإنجاز يجب أن تكون بين 0 و 100');return;}
+  if(progVal<0||progVal>100){_showEditError('نسبة الإنجاز يجب أن تكون بين 0 و 100');markErr('progress');_restore();return;}
   const valNum=parseFloat(v('value_num'))||0;
-  if(valNum<0){await showAlert('القيمة التعاقدية لا يمكن أن تكون سالبة');return;}
+  if(valNum<0){_showEditError('القيمة التعاقدية لا يمكن أن تكون سالبة');markErr('value_num');_restore();return;}
+  // تحقق من صيغ البريد والجوال
+  const emailFields=[['pm_email','إيميل مدير المشروع'],['contractor_email','إيميل المقاول']];
+  for(const [f,lbl] of emailFields){const val=v(f).trim();if(val&&!_isValidEmail(val)){_showEditError('صيغة '+lbl+' غير صحيحة');markErr(f);_restore();return;}}
+  const phoneFields=[['pm_phone','جوال مدير المشروع'],['consultant_phone','جوال الاستشاري'],['dept_manager_phone','جوال المسؤول'],['contractor_phone','جوال المقاول']];
+  for(const [f,lbl] of phoneFields){const val=v(f).trim();if(val&&!_isValidPhone(val)){_showEditError('صيغة '+lbl+' غير صحيحة (متوقع: 05xxxxxxxx أو +966...)');markErr(f);_restore();return;}}
   p.name=nameVal;
   p.status=v('status');p.status_raw=LABELS[p.status]||p.status_raw;
   p.status_raw=LABELS[p.status]||p.status;
@@ -1728,11 +1789,12 @@ async function saveProject(id){
   p.contractor_rank=v('contractor_rank');
   p.letters=v('letters');
   p.notes=v('notes');
-  try{await setDoc(doc(db,'projects',String(p.id)),{...p});}catch(e){console.error('saveProject',e);showAlert('تعذّر حفظ المشروع. تحقق من الاتصال والصلاحيات.');_busy=false;return;}
+  try{await setDoc(doc(db,'projects',String(p.id)),{...p});}catch(e){console.error('saveProject',e);showAlert('تعذّر حفظ المشروع. تحقق من الاتصال والصلاحيات.');_restore();return;}
+  _editDirty=false;
   updateLastModified();
   renderAll();
   openDetail(id);
-  }finally{_busy=false;}
+  }finally{_restore();}
 }
 
 async function addNewProject(){
