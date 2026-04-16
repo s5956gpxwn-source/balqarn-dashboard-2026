@@ -370,7 +370,7 @@ body.dark .dp-item-orn{filter:brightness(0) invert(1) sepia(1) saturate(0.3) hue
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,setPersistence,browserSessionPersistence}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 import{getFirestore,collection,getDocs,doc,getDoc,setDoc,deleteDoc,writeBatch}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
 // ⚠️ ضع إعدادات Firebase الخاصة بمشروعك هنا
@@ -386,8 +386,8 @@ const firebaseConfig={
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
 const db=getFirestore(app);
-// جلسة محصورة بعمر التبويب — تختفي تلقائياً عند إغلاق النافذة
-setPersistence(auth,browserSessionPersistence).catch(()=>{});
+// ملاحظة: نستخدم LOCAL persistence الافتراضي — الحسابات تُنشأ يدوياً
+// من الإدارة (لا تسجيل ذاتي)، فبقاء الجلسة بين الجلسات يُحسّن التجربة.
 
 const ORNS = {
   tawq:'assets/ornaments/tawq.png',
@@ -494,38 +494,52 @@ window.doLogout=async function(){
 onAuthStateChanged(auth,async(user)=>{
   const loader=document.getElementById('authLoading');
   if(user){
-    // ملاحظة: شرط توثيق البريد مُلغى لأن الحسابات تُنشأ يدوياً من الإدارة
-    // ولا يوجد تسجيل ذاتي في التطبيق
-    // محاولة فتح فوري من الكاش (بصلاحيات viewer فقط للأمان - الصلاحيات الحقيقية تأتي من Firestore)
+    // عرض فوري من الكاش (بالدور المخزّن) — الحماية الحقيقية من Firestore Rules
+    let cachedProjectsSnap=null;
+    let cachedRole=null;
     const cachedUser=localStorage.getItem('cachedUser');
     const cachedProjects=localStorage.getItem('cachedProjects');
     if(cachedUser&&cachedProjects){
       try{
         const parsed=JSON.parse(cachedUser);
-        currentUser={...parsed,role:'viewer'};
+        currentUser={...parsed};
+        cachedRole=parsed.role;
         projects=JSON.parse(cachedProjects);
-        loadHiddenFields().then(()=>{applyLogin();renderAll();});
+        cachedProjectsSnap=cachedProjects;
+        await loadHiddenFields();
+        applyLogin();
+        renderAll();
         loader.classList.add('hidden');
-      }catch(e){}
+      }catch(e){console.warn('cache restore failed',e);}
     }
-    // تحديث من Firestore في الخلفية
+    // تحديث من Firestore في الخلفية — لا نعيد الرسم إلا لو فعلاً تغيّر شيء
     try{
       const userDoc=await getDoc(doc(db,'users',user.uid));
+      let newUser;
       if(userDoc.exists()){
         const ud=userDoc.data();
-        currentUser={username:user.email,name:ud.name,welcome:ud.welcome,role:ud.role};
-        if(ud.theme)setTheme(ud.theme);
+        newUser={username:user.email,name:ud.name,welcome:ud.welcome,role:ud.role};
+        if(ud.theme&&!document.body.classList.contains(ud.theme))setTheme(ud.theme);
         if(ud.printSettings){_printSettings=ud.printSettings;try{localStorage.setItem('printSettings',JSON.stringify(ud.printSettings));}catch(e){}}
       }else{
-        currentUser={username:user.email,name:user.email,welcome:'مرحباً',role:'viewer'};
+        newUser={username:user.email,name:user.email,welcome:'مرحباً',role:'viewer'};
       }
+      const roleChanged=cachedRole!==newUser.role;
+      currentUser=newUser;
       try{localStorage.setItem('cachedUser',JSON.stringify(currentUser));}catch(e){}
       await loadProjects();
       await loadHiddenFields();
-      try{localStorage.setItem('cachedProjects',JSON.stringify(projects));}catch(e){}
-      applyLogin();
-      renderAll();
-    }catch(e){}
+      const newProjectsSnap=JSON.stringify(projects);
+      try{localStorage.setItem('cachedProjects',newProjectsSnap);}catch(e){}
+      // أعد الرسم فقط لو:
+      // (1) لم يكن هناك كاش معروض، أو
+      // (2) تغيّر الدور، أو
+      // (3) تغيّرت بيانات المشاريع
+      if(!cachedProjectsSnap||roleChanged||newProjectsSnap!==cachedProjectsSnap){
+        applyLogin();
+        renderAll();
+      }
+    }catch(e){console.warn('firestore refresh failed',e);}
   }else{
     localStorage.removeItem('cachedUser');
     localStorage.removeItem('cachedProjects');
